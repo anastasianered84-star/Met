@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мои бронирования - MetaBook</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+     <link rel="stylesheet" href="../style/styles.css">
+    <link rel="stylesheet" href="../style/booking.css">
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="header-container">
+          <div class="logo">
+                <img src="../images/logo.png" p="MetaBook Logo" class="logo-image">
+            </div>
+            <nav>
+                <ul>
+                    <li><a href="../index.html">Главная</a></li>
+                    <li><a href="catalog.html">Каталог</a></li>
+                    <li><a href="booking.html" class="active">Мои бронирования</a></li>
+                    
+                </ul>
+            </nav>
+            <div class="user-actions">
+                <button class="btn btn-outline"><i class="fa-solid fa-user"></i> Профиль</button>
+                <button class="btn btn-primary" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Выйти</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="booking-container">
+        <div class="container">
+            <h1 class="page-title">Мои бронирования</h1>
+            
+            <!-- Filter Tabs -->
+            <div class="booking-tabs">
+                <button class="tab-btn active" data-tab="active">Активные</button>
+                <button class="tab-btn" data-tab="upcoming">Предстоящие</button>
+                <button class="tab-btn" data-tab="completed">Завершенные</button>
+                <button class="tab-btn" data-tab="cancelled">Отмененные</button>
+            </div>
+
+            <!-- Statistics -->
+            <div class="booking-stats">
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fa-solid fa-clock"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3>5</h3>
+                        <p>Активных броней</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fa-solid fa-calendar-check"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3>12</h3>
+                        <p>Предстоящих</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fa-solid fa-check-circle"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3>28</h3>
+                        <p>Завершенных</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fa-solid fa-times-circle"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3>3</h3>
+                        <p>Отмененных</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bookings List -->
+            <div class="bookings-list">
+                <!-- Active Bookings -->
+                <div class="tab-content active" id="active-tab">
+                    <div class="booking-card active">
+                        <div class="booking-header">
+                            <h3>Киберпанк-лаунж</h3>
+                            <span class="booking-status status-active">Активно</span>
+                        </div>
+                        <div class="booking-details">
+                            <div class="booking-info">
+                                <div class="info-item">
+                                    <i class="fa-solid fa-calendar"></i>
+                                    <span>15 декабря 2023</span>
+                                </div>
+                                <div class="info-item">
+                                    <i class="fa-solid fa-clock"></i>
+                                    <span>14:00 - 16:00 (2 часа)</span>
+                                </div>
+                                <div class="info-item">
+                                    <i class="fa-solid fa-users"></i>
+                                    <span>4 участника</span>
+                                </div>
+                                <div class="info-item">
+                                    <i class="fa-solid fa-wallet"></i>
+                                    <span>700 ₽</span>
+                                </div>
+                            </div>
+                            <div class="booking-actions">
+                                <a href="room.html" class="btn btn-primary">
+                                    <i class="fa-solid fa-play"></i> Подключиться
+                                </a>
+                                <button class="btn btn-outline" onclick="cancelBooking('b123')">
+                                    <i class="fa-solid fa-times"></i> Отменить
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="booking-card active">
+                        <div class="booking-header">
+                            <h3>Космическая станция</h3>
+                            <span class="booking-status status-active">Активно</span>
+                        </div>
+                        <div class="booking-details">
+                            <div class="booking-info">
+                                <div class="info-item">
+                                    <i class="fa-solid fa-calendar"></i>
+                                    <span>15 декабря 2023</span>
+                                </div>
+                                <div class="info-item">
+                                    <i class="fa-solid fa-clock"></i>
+                                    <span>18:00 - 20:00 (2 часа)</span>
+                                </div>
+                                <div class="info-item">
+                                    <i class="fa-solid fa-users"></i>
+                                    <span>6 участников</span>
+                                </div>
+                                <div class="info-item">
+                                    <i class="fa-solid fa-wallet"></i>
+                                    <span>1000 ₽</span>
+                                </div>
+                            </div>
+                            <div class="booking-actions">
+                                <a href="room.html" class="btn btn-primary">
+                                    <i class="fa-solid fa-play"></i> Подключиться
+                                </a>
+                                <button class="btn btn-outline" onclick="cancelBooking('b124')">
+                                    <i class="fa-solid fa-times"></i> Отменить
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Upcoming Bookings -->
+                <div class="tab-content" id="upcoming-tab">
+                    <div class="booking-card upcoming">
+                        <div class="booking-header">
+                            <h3>Природный оазис</h3>
+                            <span class="booking-status status-upcoming">Предстоящее</span>
+                        </div>
+                        <div class="booking-details">
+                            <div class="booking-info">
+                                <div class="info-item">
+                                    <i class="fa-solid fa-calendar"></i>
+                                    <span>16 декабря 2023</span>
+                                </div>
+                                <div class="info-item">
+                                    <i class="fa-solid fa-clock"></i>
+                                    <span>11:00 - 12:00 (1 час)</span>
+                                </div>
+                                <div class="info-item">
+                                    <i class="fa-solid fa-users"></i>
+                                    <span>2 участника</span>
+                                </div>
+                                <div class="info-item">
+                                    <i class="fa-solid fa-wallet"></i>
+                                    <span>0 ₽</span>
+                                </div>
+                            </div>
+                            <div class="booking-actions">
+                                <button class="btn btn-outline" onclick="editBooking('b125')">
+                                    <i class="fa-solid fa-edit"></i> Изменить
+                                </button>
+                                <button class="btn btn-outline" onclick="cancelBooking('b125')">
+                                    <i class="fa-solid fa-times"></i> Отменить
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Completed Bookings -->
+                <div class="tab-content" id="completed-tab">
+                    <div class="booking-card completed">
+                        <div class="booking-header">
+                            <h3>VR-кинотеатр "Андромеда"</h3>
+                            <span class="booking-status status-completed">Завершено</span>
+                        </div>
+                        <div class="booking-details">
+                            <div class="booking-info">
+                                <div class="info-item">
+                                    <i class="fa-solid fa-calendar"></i>
+                                    <span>14 декабря 2023</span>
+                                </div>
+                                <div class="info-item">
+                                    <i class="fa-solid fa-clock"></i>
+                                    <span>20:00 - 22:00 (2 часа)</span>
+                                </div>
+                                <div class="info-item">
+                                    <i class="fa-solid fa-users"></i>
+                                    <span>8 участников</span>
+                                </div>
+                                <div class="info-item">
+                                    <i class="fa-solid fa-wallet"></i>
+                                    <span>1200 ₽</span>
+                                </div>
+                            </div>
+                            <div class="booking-actions">
+                                <button class="btn btn-outline" onclick="viewDetails('b126')">
+                                    <i class="fa-solid fa-info-circle"></i> Детали
+                                </button>
+                                <button class="btn btn-primary" onclick="bookAgain('b126')">
+                                    <i class="fa-solid fa-repeat"></i> Забронировать снова
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cancelled Bookings -->
+                <div class="tab-content" id="cancelled-tab">
+                    <div class="booking-card cancelled">
+                        <div class="booking-header">
+                            <h3>Конференц-зал "Орион"</h3>
+                            <span class="booking-status status-cancelled">Отменено</span>
+                        </div>
+                        <div class="booking-details">
+                            <div class="booking-info">
+                                <div class="info-item">
+                                    <i class="fa-solid fa-calendar"></i>
+                                    <span>13 декабря 2023</span>
+                                </div>
+                                <div class="info-item">
+                                    <i class="fa-solid fa-clock"></i>
+                                    <span>15:00 - 17:00 (2 часа)</span>
+                                </div>
+                                <div class="info-item">
+                                    <i class="fa-solid fa-users"></i>
+                                    <span>10 участников</span>
+                                </div>
+                                <div class="info-item">
+                                    <i class="fa-solid fa-wallet"></i>
+                                    <span>800 ₽</span>
+                                </div>
+                            </div>
+                            <div class="booking-actions">
+                                <button class="btn btn-outline" onclick="viewDetails('b127')">
+                                    <i class="fa-solid fa-info-circle"></i> Детали
+                                </button>
+                                <button class="btn btn-primary" onclick="bookAgain('b127')">
+                                    <i class="fa-solid fa-repeat"></i> Забронировать снова
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Empty State -->
+            <div class="empty-state" id="emptyState" style="display: none;">
+                <div class="empty-icon">
+                    <i class="fa-solid fa-calendar-xmark"></i>
+                </div>
+                <h3>Бронирования не найдены</h3>
+                <p>У вас пока нет бронирований в этом разделе</p>
+                <a href="../index.html" class="btn btn-primary">
+                    <i class="fa-solid fa-plus"></i> Найти комнату
+                </a>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-container">
+            <div class="footer-about">
+                <div class="logo">
+                <img src="../images/logo.png" p="MetaBook Logo" class="logo-image">
+            </div>
+                <p>Портал для бронирования виртуальных комнат в метавселенной. Найдите идеальное пространство для вашего следующего VR-опыта.</p>
+            </div>
+            <div class="footer-links">
+                <h3>Навигация</h3>
+                <ul>
+                    <li><a href="../index.html">Главная</a></li>
+                    <li><a href="room.html">Каталог комнат</a></li>
+                    <li><a href="booking.html">Мои бронирования</a></li>
+                    <li><a href="#">Создать комнату</a></li>
+                </ul>
+            </div>
+            <div class="footer-links">
+                <h3>Поддержка</h3>
+                <ul>
+                    <li><a href="#">Помощь</a></li>
+                    <li><a href="#">FAQ</a></li>
+                    <li><a href="#">Контакты</a></li>
+                    <li><a href="#">Условия использования</a></li>
+                </ul>
+            </div>
+            <div class="footer-links">
+                <h3>Социальные сети</h3>
+                <ul>
+                    <li><a href="#"><i class="fa-brands fa-vk"></i> VKontakte</a></li>
+                    <li><a href="#"><i class="fa-brands fa-telegram"></i> Telegram</a></li>
+                    <li><a href="#"><i class="fa-brands fa-youtube"></i> YouTube</a></li>
+                    <li><a href="#"><i class="fa-brands fa-discord"></i> Discord</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="copyright">
+            <p>&copy; 2025 MetaBook. Все права защищены.</p>
+        </div>
+    </footer>
+
+    <script src="script/booking-script.js"></script>
+    <script src="script/auth-check.js"></script>
+</body>
+
+<script src="script/auth.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', async function() {
+        const token = localStorage.getItem('authToken');
+        const userId = localStorage.getItem('userId');
+        await updateAuthUI(token, userId);
+    });
+</script>
+</html>

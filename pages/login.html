@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MetaBook - Вход в аккаунт</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../style/styles.css">
+    <link rel="stylesheet" href="../style/auth.css">
+</head>
+<body>
+
+    <header>
+        <div class="header-container">
+            <div class="logo">
+                <img src="../images/logo.png" p="MetaBook Logo" class="logo-image">
+            </div>
+            <nav>
+                <ul>
+                    <li><a href="../index.html">Главная</a></li>
+                    <li><a href="room.html">Каталог</a></li>
+                    <li><a href="booking.html">Мои бронирования</a></li>
+                  
+                </ul>
+            </nav>
+            <div class="user-actions">
+                <button class="btn btn-outline" onclick="location.href='register.html'">
+                    <i class="fa-solid fa-user-plus"></i> Регистрация
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <section class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <h2>Вход в аккаунт</h2>
+                <p>Введите свои данные для входа в систему</p>
+            </div>
+            
+            <form class="auth-form" id="loginForm">
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <div class="input-with-icon">
+                        <i class="fa-solid fa-envelope"></i>
+                        <input type="email" id="email" placeholder="Ваш email" required>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Пароль</label>
+                    <div class="input-with-icon">
+                        <i class="fa-solid fa-lock"></i>
+                        <input type="password" id="password" placeholder="Ваш пароль" required>
+                    </div>
+                </div>
+                
+                <div class="form-options">
+                    <label class="checkbox-container">
+                        <input type="checkbox" id="rememberMe">
+                        <span class="checkmark"></span>
+                        Запомнить меня
+                    </label>
+                    <a href="#" class="forgot-password">Забыли пароль?</a>
+                </div>
+                
+                <button type="submit" class="btn btn-primary auth-submit">
+                    <i class="fa-solid fa-right-to-bracket"></i> Войти
+                </button>
+                
+                <div class="auth-divider">
+                    <span>или</span>
+                </div>
+                
+                <div class="social-auth">
+                    <button type="button" class="btn btn-social btn-vk">
+                        <i class="fa-brands fa-vk"></i> ВКонтакте
+                    </button>
+                    <button type="button" class="btn btn-social btn-google">
+                        <i class="fa-brands fa-google"></i> Google
+                    </button>
+                </div>
+                
+                <div class="auth-footer">
+                    <p>Ещё нет аккаунта? <a href="register.html">Зарегистрироваться</a></p>
+                </div>
+            </form>
+        </div>
+        
+        <div class="auth-decoration">
+            <div class="decoration-content">
+                
+                <h3>Добро пожаловать в MetaBook</h3>
+                <p>Войдите, чтобы получить доступ к бронированию VR-комнат и управлению своими резервациями</p>
+            </div>
+        </div>
+    </section>
+
+    <script src="script/auth.js"></script>
+    <script src="script/auth-check.js"></script>
+</body>
+<script src="script/auth.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', async function() {
+        const token = localStorage.getItem('authToken');
+        const userId = localStorage.getItem('userId');
+        await updateAuthUI(token, userId);
+    });
+</script>
+</html>

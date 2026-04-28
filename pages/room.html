@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Киберпанк-лаунж - MetaBook</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../style/room.css">
+    <link rel="stylesheet" href="../style/styles.css">
+</head>
+<body class="room-page">
+    <header>
+        <div class="header-container">
+            <div class="logo">
+                <img src="../images/logo.png" p="MetaBook Logo" class="logo-image">
+            </div>
+            <nav>
+                <ul>
+                    <li><a href="../index.html">Главная</a></li>
+                    <li><a href="catalog.html">Каталог</a></li>
+                    <li><a href="booking.html">Мои бронирования</a></li>
+                </ul>
+            </nav>
+            <div class="user-actions">
+                <div class="user-profile">
+                    <img src="../images/iconprofile.png" alt="Аватар" class="user-avatar">
+                    <span>Анастасия</span>
+                </div>
+                <button class="btn btn-outline" onclick="leaveRoom()">
+                    <i class="fa-solid fa-door-open"></i> Выйти
+                </button>
+            </div>
+        </div>
+    </header>
+
+
+    <main class="room-main">
+        <div class="room-container">
+
+            <aside class="room-sidebar">
+                <div class="sidebar-section">
+                    <div class="section-header">
+                        <h3>Участники (8/12)</h3>
+                        <button class="btn btn-sm btn-primary" onclick="showInviteModal()">
+                            <i class="fa-solid fa-plus"></i> Пригласить
+                        </button>
+                    </div>
+                    <div class="users-list">
+                        <div class="user-item host">
+                            <img src="../images/iconprofile.png" alt="Аватар" class="user-avatar">
+                            <div class="user-info">
+                                <span class="user-name">Анастасия</span>
+                                <span class="user-role">Создатель</span>
+                            </div>
+                            <div class="user-status online"></div>
+                        </div>
+                        <div class="user-item">
+                            <img src="../images/iconprofile.png" alt="Аватар" class="user-avatar">
+                            <div class="user-info">
+                                <span class="user-name">Мария</span>
+                                <span class="user-role">Участник</span>
+                            </div>
+                            <div class="user-status online"></div>
+                        </div>
+                        <div class="user-item">
+                            <img src="../images/iconprofile.png" alt="Аватар" class="user-avatar">
+                            <div class="user-info">
+                                <span class="user-name">Дмитрий</span>
+                                <span class="user-role">Участник</span>
+                            </div>
+                            <div class="user-status speaking"></div>
+                        </div>
+                        <div class="user-item">
+                            <img src="../images/iconprofile.png" alt="Аватар" class="user-avatar">
+                            <div class="user-info">
+                                <span class="user-name">Екатерина</span>
+                                <span class="user-role">Участник</span>
+                            </div>
+                            <div class="user-status online"></div>
+                        </div>
+                        <div class="user-item">
+                            <img src="../images/iconprofile.png" alt="Аватар" class="user-avatar">
+                            <div class="user-info">
+                                <span class="user-name">Иван</span>
+                                <span class="user-role">Участник</span>
+                            </div>
+                            <div class="user-status away"></div>
+                        </div>
+                        <div class="user-item">
+                            <img src="../images/iconprofile.png" alt="Аватар" class="user-avatar">
+                            <div class="user-info">
+                                <span class="user-name">Сергей</span>
+                                <span class="user-role">Участник</span>
+                            </div>
+                            <div class="user-status offline"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sidebar-section">
+                    <h3>Информация о комнате</h3>
+                    <div class="room-info">
+                        <div class="info-item">
+                            <i class="fa-solid fa-clock"></i>
+                            <span>Осталось: 1ч 25м</span>
+                        </div>
+                        <div class="info-item">
+                            <i class="fa-solid fa-users"></i>
+                            <span>Максимум: 12 человек</span>
+                        </div>
+                        <div class="info-item">
+                            <i class="fa-solid fa-wifi"></i>
+                            <span>Стабильное соединение</span>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <aside class="chat-sidebar">
+                <div class="chat-header">
+                    <h3>Чат комнаты</h3>
+                    <button class="btn btn-outline" onclick="toggleChat()">
+                        <i class="fa-solid fa-times"></i>
+                    </button>
+                </div>
+
+                <div class="chat-messages">
+                    <div class="message system">
+                        <div class="message-content">
+                            <p>Вы присоединились к комнате "Киберпанк-лаунж"</p>
+                        </div>
+                        <span class="message-time">12:30</span>
+                    </div>
+
+                    <div class="message">
+                        <img src="../images/iconprofile.png" alt="Аватар" class="message-avatar">
+                        <div class="message-content">
+                            <span class="message-author">Мария</span>
+                            <p>Привет всем! Как вам атмосфера комнаты?</p>
+                        </div>
+                        <span class="message-time">12:32</span>
+                    </div>
+
+                    <div class="message">
+                        <img src="../images/iconprofile.png" alt="Аватар" class="message-avatar">
+                        <div class="message-content">
+                            <span class="message-author">Дмитрий</span>
+                            <p>Очень круто! Неоновые огни просто завораживают 😍</p>
+                        </div>
+                        <span class="message-time">12:33</span>
+                    </div>
+
+                    <div class="message own">
+                        <div class="message-content">
+                            <p>Согласен! Отличная работа дизайнеров</p>
+                        </div>
+                        <span class="message-time">12:34</span>
+                    </div>
+
+                    <div class="message">
+                        <img src="../images/iconprofile.png" alt="Аватар" class="message-avatar">
+                        <div class="message-content">
+                            <span class="message-author">Екатерина</span>
+                            <p>Кто-то уже пробовал интерактивные элементы?</p>
+                        </div>
+                        <span class="message-time">12:35</span>
+                    </div>
+                </div>
+
+                <div class="chat-input">
+                    <input type="text" placeholder="Напишите сообщение..." id="messageInput">
+                    <button class="btn btn-primary" onclick="sendMessage()">
+                        <i class="fa-solid fa-paper-plane"></i>
+                    </button>
+                </div>
+            </aside>
+        </div>
+    </main>
+    <div class="modal" id="inviteModal">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeModal('inviteModal')">&times;</button>
+            <h2 class="modal-title">Пригласить в комнату</h2>
+            
+            <div class="invite-options">
+                <div class="invite-option" onclick="showInviteMethod('link')">
+                    <div class="invite-icon">
+                        <i class="fa-solid fa-link"></i>
+                    </div>
+                    <div class="invite-content">
+                        <h4>Ссылка для приглашения</h4>
+                        <p>Скопируйте и отправьте ссылку друзьям</p>
+                    </div>
+                    <i class="fa-solid fa-chevron-right"></i>
+                </div>
+                
+                <div class="invite-option" onclick="showInviteMethod('qr')">
+                    <div class="invite-icon">
+                        <i class="fa-solid fa-qrcode"></i>
+                    </div>
+                    <div class="invite-content">
+                        <h4>QR-код</h4>
+                        <p>Отсканируйте код для быстрого доступа</p>
+                    </div>
+                    <i class="fa-solid fa-chevron-right"></i>
+                </div>
+                
+                <div class="invite-option" onclick="showInviteMethod('search')">
+                    <div class="invite-icon">
+                        <i class="fa-solid fa-user-plus"></i>
+                    </div>
+                    <div class="invite-content">
+                        <h4>Поиск пользователей</h4>
+                        <p>Найдите и пригласите друзей из списка</p>
+                    </div>
+                    <i class="fa-solid fa-chevron-right"></i>
+                </div>
+            </div>
+            <div class="invite-method" id="linkMethod">
+                <h4>Ссылка для приглашения</h4>
+                <div class="copy-link">
+                    <input type="text" value="https://metabook.com/join/cyberpunk-lounge?invite=abc123" readonly id="inviteLink">
+                    <button class="btn btn-primary" onclick="copyInviteLink()">
+                        <i class="fa-solid fa-copy"></i> Копировать
+                    </button>
+                </div>
+                <p class="invite-description">
+                    Отправьте эту ссылку друзьям для присоединения к комнате
+                </p>
+            </div>
+            <div class="invite-method" id="qrMethod">
+                <h4>QR-код для присоединения</h4>
+                <div class="qr-code">
+                    <div class="qr-placeholder">
+                        <i class="fa-solid fa-qrcode"></i>
+                    </div>
+                    <p>Отсканируйте код камерой телефона для быстрого доступа к комнате</p>
+                </div>
+            </div>
+            <div class="invite-method" id="searchMethod">
+                <h4>Поиск пользователей</h4>
+                <div class="user-search">
+                    <input type="text" placeholder="Поиск по имени или email..." class="search-input" oninput="searchUsers(this.value)">             
+                    <div class="search-results">
+                        <div class="search-result">
+                            <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=32&h=32&fit=crop&crop=face" alt="User">
+                            <div class="search-result-info">
+                                <span class="search-result-name">Иван Петров</span>
+                                <span class="search-result-status">В сети</span>
+                            </div>
+                            <button class="invite-btn" onclick="inviteUser('user1')">
+                                Пригласить
+                            </button>
+                        </div>
+                        <div class="search-result">
+                            <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=32&h=32&fit=crop&crop=face" alt="User">
+                            <div class="search-result-info">
+                                <span class="search-result-name">Сергей Иванов</span>
+                                <span class="search-result-status">Не в сети</span>
+                            </div>
+                            <button class="invite-btn" onclick="inviteUser('user2')">
+                                Пригласить
+                            </button>
+                        </div>
+                        <div class="search-result">
+                            <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=32&h=32&fit=crop&crop=face" alt="User">
+                            <div class="search-result-info">
+                                <span class="search-result-name">Анна Сидорова</span>
+                                <span class="search-result-status">В сети</span>
+                            </div>
+                            <button class="invite-btn" onclick="inviteUser('user3')">
+                                Пригласить
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-outline" onclick="backToInviteMethods()" id="backButton">
+                    <i class="fa-solid fa-arrow-left"></i> Назад
+                </button>
+            </div>
+        </div>
+    </div>
+    <script src="script/room-script.js"></script>
+</body>
+</html>

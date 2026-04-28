@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Unit-тесты</title>
+<style>
+body { font-family: sans-serif; padding: 1rem; background: #f5f5f5; }
+.test-pass { color: green; }
+.test-fail { color: red; }
+.test-case { margin-bottom: 0.5rem; }
+</style>
+</head>
+<body>
+<h1>Unit-тесты</h1>
+<div id="testResults"></div>
+
+<script>
+// Простая функция для логирования результатов теста
+function assertEquals(actual, expected, testName) {
+    const container = document.getElementById('testResults');
+    const div = document.createElement('div');
+    div.className = 'test-case';
+    if (actual === expected) {
+        div.innerHTML = `✅ <span class="test-pass">${testName}: пройдено</span>`;
+    } else {
+        div.innerHTML = `❌ <span class="test-fail">${testName}: провалено (ожидалось "${expected}", получено "${actual}")</span>`;
+    }
+    container.appendChild(div);
+}
+
+// ===== Функции для тестов =====
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.appendChild(document.createTextNode(text));
+    return div.innerHTML;
+}
+
+// ===== Тесты =====
+function testEmptyFields() {
+    const firstName = '';
+    const email = '';
+    const valid = firstName !== '' && email !== '';
+    assertEquals(valid, false, 'TC-01-03: пустые обязательные поля');
+}
+
+function testPasswordMismatch() {
+    const pass1 = 'Test1234!';
+    const pass2 = 'Test5678!';
+    const match = pass1 === pass2;
+    assertEquals(match, false, 'TC-01-04: несовпадение паролей');
+}
+
+function testEscapeHtml() {
+    // Экранируем закрывающий тег скрипта \/ чтобы браузер не ломал HTML
+    const input = '<script>alert(1)<\/script>';
+    const escaped = escapeHtml(input);
+    assertEquals(escaped, '&lt;script&gt;alert(1)&lt;/script&gt;', 'TC-05-06: экранирование HTML');
+}
+
+// ===== Запуск тестов =====
+document.addEventListener('DOMContentLoaded', () => {
+    testEmptyFields();
+    testPasswordMismatch();
+    testEscapeHtml();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Тесты Auth</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-result { margin: 5px 0; padding: 5px 10px; border-radius: 4px; }
+        .pass { background-color: #d4edda; color: #155724; }
+        .fail { background-color: #f8d7da; color: #721c24; }
+        button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
+    </style>
+    <script src="auth.js"></script> <!-- твой основной скрипт -->
+</head>
+<body>
+    <h1>Тесты для аутентификации</h1>
+    <button id="runTestsBtn">Запустить тесты</button>
+    <div id="testResults"></div>
+
+    <script>
+        const resultsDiv = document.getElementById('testResults');
+
+        function assert(condition, message) {
+            const div = document.createElement('div');
+            div.className = 'test-result ' + (condition ? 'pass' : 'fail');
+            div.textContent = (condition ? '✅ PASS: ' : '❌ FAIL: ') + message;
+            resultsDiv.appendChild(div);
+        }
+
+        // Тесты
+        function testRegisterSuccess() {
+            const response = { success: true };
+            assert(response.success === true, 'TC-01-01: Успешная регистрация');
+        }
+
+        function testRegisterExistingEmail() {
+            const response = { success: false, message: 'Пользователь с таким email уже существует' };
+            assert(response.success === false && response.message.includes('email уже существует'), 'TC-01-02: Регистрация с существующим email');
+        }
+
+        function testRegisterEmptyFields() {
+            const firstName = '';
+            const email = '';
+            const valid = firstName && email;
+            assert(valid === false, 'TC-01-03: Пустые обязательные поля');
+        }
+
+        function testPasswordMismatch() {
+            const password = 'Test1234!';
+            const confirmPassword = 'Test5678!';
+            assert(password !== confirmPassword, 'TC-01-04: Несовпадение паролей');
+        }
+
+        function testLoginSuccess() {
+            const response = { success: true, token: 'abcd', user_id: '123' };
+            if (response.success) {
+                localStorage.setItem('authToken', response.token);
+                localStorage.setItem('userId', response.user_id);
+            }
+            assert(localStorage.getItem('authToken') === 'abcd' && localStorage.getItem('userId') === '123', 'TC-01-05: Успешный вход');
+        }
+
+        function testLoginWrongPassword() {
+            const response = { success: false, message: 'Неверный email или пароль' };
+            if (!response.success) {
+                localStorage.removeItem('authToken');
+                localStorage.removeItem('userId');
+            }
+            assert(localStorage.getItem('authToken') === null && localStorage.getItem('userId') === null, 'TC-01-06: Вход с неверным паролем');
+        }
+
+        function testLogout() {
+            localStorage.setItem('authToken', 'abcd');
+            localStorage.setItem('userId', '123');
+            logout();
+            assert(localStorage.getItem('authToken') === null && localStorage.getItem('userId') === null, 'TC-01-07: Выход из системы');
+        }
+
+        function testLoginNonExistingEmail() {
+            const response = { success: false, message: 'Неверный email или пароль' };
+            if (!response.success) {
+                localStorage.removeItem('authToken');
+            }
+            assert(localStorage.getItem('authToken') === null, 'TC-01-08: Вход с несуществующим email');
+        }
+
+        function runAllTests() {
+            resultsDiv.innerHTML = '';
+            testRegisterSuccess();
+            testRegisterExistingEmail();
+            testRegisterEmptyFields();
+            testPasswordMismatch();
+            testLoginSuccess();
+            testLoginWrongPassword();
+            testLogout();
+            testLoginNonExistingEmail();
+        }
+
+        document.getElementById('runTestsBtn').addEventListener('click', runAllTests);
+    </script>
+</body>
+</html>

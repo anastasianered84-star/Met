@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MetaBook - Портал бронирования VR комнат</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style/index.css">
+    <link rel="stylesheet" href="style/styles.css">
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="header-container">
+            <div class="logo">
+                <img src="images/logo.png" alt="MetaBook" class="logo-image">
+            </div>
+            <nav>
+                <ul>
+                    <li><a href="#">Главная</a></li>
+                    <li><a href="pages/catalog.html">Каталог</a></li>
+                    <li><a href="pages/booking.html">Мои бронирования</a></li>
+                </ul>
+            </nav>
+            <div class="user-actions">
+                <button class="btn btn-outline" onclick="location.href='pages/login.html'">
+                    <i class="fa-solid fa-user"></i> Войти
+                </button>
+                <button class="btn btn-primary" onclick="location.href='pages/register.html'">
+                    <i class="fa-solid fa-user-plus"></i> Регистрация
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-content">
+            <h1>Бронируйте VR-миры для вашего метаприключения</h1>
+            <p>Найдите идеальную виртуальную комнату для встреч, игр или мероприятий</p>
+            <div class="search-bar">
+                <input type="text" placeholder="Поиск по названию, тегам или описанию...">
+                <button><i class="fa-solid fa-magnifying-glass"></i> Найти</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Новый блок: Что такое VR-комнаты -->
+    <section class="about-vr">
+        <div class="container">
+            <h2 class="section-title">Что такое VR-комнаты в метавселенной?</h2>
+            <div class="about-content">
+                <div class="about-text">
+                    <p><strong>VR-комнаты MetaBook</strong> — это виртуальные пространства, в которых вы можете находиться, общаться и взаимодействовать с другими людьми, используя VR-шлемы или обычные компьютеры.</p>
+                    <p>Представьте, что вы можете перенестись в космическую станцию, киберпанк-лаунж или тропический пляж, не выходя из дома. В этих комнатах можно проводить встречи, играть в игры, смотреть фильмы или просто отдыхать с друзьями.</p>
+                    <p>Каждая комната имеет свои уникальные возможности, настройки освещения, интерактивные предметы и поддерживает до 12 человек одновременно.</p>
+                </div>
+                <div class="about-features">
+                    <div class="feature">
+                        <i class="fa-solid fa-vr-cardboard"></i>
+                        <span>Поддержка всех VR-устройств</span>
+                    </div>
+                    <div class="feature">
+                        <i class="fa-solid fa-users"></i>
+                        <span>До 12 человек в комнате</span>
+                    </div>
+                    <div class="feature">
+                        <i class="fa-solid fa-clock"></i>
+                        <span>Бронирование 24/7</span>
+                    </div>
+                    <div class="feature">
+                        <i class="fa-solid fa-microphone"></i>
+                        <span>Голосовой чат</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Rooms Grid -->
+    <!-- Rooms Grid -->
+<section class="container">
+    <h2 class="section-title">Популярные VR комнаты</h2>
+    <div class="rooms-grid">
+        <!-- Room 1 -->
+        <div class="room-card">
+            <div class="room-image">
+                <img src="images/room1.jpeg" alt="Киберпанк-лаунж">
+                <div class="room-badge popular">Популярное</div>
+                <button class="favorite-btn">
+                    <i class="fa-regular fa-heart"></i>
+                </button>
+            </div>
+            <div class="room-content">
+                <h3 class="room-title">Киберпанк-лаунж</h3>
+                <div class="room-rating">
+                    <i class="fa-solid fa-star"></i>
+                    <i class="fa-solid fa-star"></i>
+                    <i class="fa-solid fa-star"></i>
+                    <i class="fa-solid fa-star"></i>
+                    <i class="fa-solid fa-star-half-alt"></i>
+                    <span>(4.5)</span>
+                </div>
+                <p class="room-description">Погрузитесь в атмосферу неонового будущего с панорамным видом на ночной город.</p>
+                <div class="room-features">
+                    <span class="feature-tag"><i class="fa-solid fa-wifi"></i> VR Ready</span>
+                    <span class="feature-tag"><i class="fa-solid fa-microphone"></i> Голосовой чат</span>
+                </div>
+                <div class="room-meta">
+                    <div class="room-capacity">
+                        <i class="fa-solid fa-user-group"></i> до 8 человек
+                    </div>
+                    <div class="room-price">
+                        <span class="current-price">350₽</span>
+                        <span class="price-period">/час</span>
+                    </div>
+                </div>
+                <div class="room-actions">
+                    <button class="btn btn-outline btn-details" onclick="viewRoomDetails(1)">
+                        <i class="fa-regular fa-eye"></i> Детали
+                    </button>
+                    <button class="btn btn-primary" onclick="openBookingModal('Киберпанк-лаунж', 8)">
+                        <i class="fa-regular fa-calendar-check"></i> Забронировать
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Room 2 -->
+        <div class="room-card">
+            <div class="room-image">
+                <img src="https://images.unsplash.com/photo-1446776653964-20c1d3a81b06?q=80&w=1742&auto=format&fit=crop" alt="Космическая станция">
+                <div class="room-badge new">Новинка</div>
+                <button class="favorite-btn">
+                    <i class="fa-regular fa-heart"></i>
+                </button>
+            </div>
+            <div class="room-content">
+                <h3 class="room-title">Космическая станция</h3>
+                <div class="room-rating">
+                    <i class="fa-solid fa-star"></i>
+                    <i class="fa-solid fa-star"></i>
+                    <i class="fa-solid fa-star"></i>
+                    <i class="fa-solid fa-star"></i>
+                    <i class="fa-regular fa-star"></i>
+                    <span>(4.0)</span>
+                </div>
+                <p class="room-description">Исследуйте космос с панорамным видом на Землю и звезды в реалистичной космической станции.</p>
+                <div class="room-features">
+                    <span class="feature-tag"><i class="fa-solid fa-rocket"></i> Невесомость</span>
+                    <span class="feature-tag"><i class="fa-solid fa-gamepad"></i> Квесты</span>
+                </div>
+                <div class="room-meta">
+                    <div class="room-capacity">
+                        <i class="fa-solid fa-user-group"></i> до 12 человек
+                    </div>
+                    <div class="room-price">
+                        <span class="current-price">500₽</span>
+                        <span class="price-period">/час</span>
+                    </div>
+                </div>
+                <div class="room-actions">
+                    <button class="btn btn-outline btn-details" onclick="viewRoomDetails(2)">
+                        <i class="fa-regular fa-eye"></i> Детали
+                    </button>
+                    <button class="btn btn-primary" onclick="openBookingModal('Космическая станция', 12)">
+                        <i class="fa-regular fa-calendar-check"></i> Забронировать
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Room 3 -->
+        <div class="room-card">
+            <div class="room-image">
+                <img src="images/room2.jpeg" alt="Природный оазис">
+                <div class="room-badge free">Бесплатно</div>
+                <button class="favorite-btn">
+                    <i class="fa-regular fa-heart"></i>
+                </button>
+            </div>
+            <div class="room-content">
+                <h3 class="room-title">Природный оазис</h3>
+                <div class="room-rating">
+                    <i class="fa-solid fa-star"></i>
+                    <i class="fa-solid fa-star"></i>
+                    <i class="fa-solid fa-star"></i>
+                    <i class="fa-solid fa-star"></i>
+                    <i class="fa-solid fa-star"></i>
+                    <span>(5.0)</span>
+                </div>
+                <p class="room-description">Расслабляющая атмосфера тропического леса с водопадом и экзотическими животными.</p>
+                <div class="room-features">
+                    <span class="feature-tag"><i class="fa-solid fa-tree"></i> Природа</span>
+                    <span class="feature-tag"><i class="fa-solid fa-water"></i> Водопад</span>
+                </div>
+                <div class="room-meta">
+                    <div class="room-capacity">
+                        <i class="fa-solid fa-user-group"></i> до 6 человек
+                    </div>
+                    <div class="room-price">
+                        <span class="current-price free-price">0₽</span>
+                        <span class="price-period">/час</span>
+                    </div>
+                </div>
+                <div class="room-actions">
+                    <button class="btn btn-outline btn-details" onclick="viewRoomDetails(3)">
+                        <i class="fa-regular fa-eye"></i> Детали
+                    </button>
+                    <button class="btn btn-primary" onclick="openBookingModal('Природный оазис', 6)">
+                        <i class="fa-regular fa-calendar-check"></i> Забронировать
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+    <!-- Booking Modal -->
+    <div class="modal" id="bookingModal">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeBookingModal()">&times;</button>
+            <h2 class="modal-title">Бронирование комнаты</h2>
+            <form id="bookingForm">
+                <input type="hidden" id="roomId">
+                <div class="form-group">
+                    <label for="roomName">Комната</label>
+                    <input type="text" id="roomName" disabled>
+                </div>
+                <div class="form-group">
+                    <label for="bookingDate">Дата</label>
+                    <input type="date" id="bookingDate" required>
+                </div>
+                <div class="form-group">
+                    <label for="startTime">Время начала</label>
+                    <input type="time" id="startTime" required>
+                </div>
+                <div class="form-group">
+                    <label for="duration">Длительность (часы)</label>
+                    <select id="duration" required>
+                        <option value="1">1 час</option>
+                        <option value="2">2 часа</option>
+                        <option value="3">3 часа</option>
+                        <option value="4">4 часа</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="participants">Количество участников</label>
+                    <input type="number" id="participants" min="1" value="1" required>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">
+                    <i class="fa-solid fa-lock"></i> Подтвердить бронирование
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-container">
+            <div class="footer-about">
+                <div class="logo">
+                    <img src="images/logo.png" alt="MetaBook" class="logo-image">
+                </div>
+                <p>Портал для бронирования виртуальных комнат в метавселенной. Найдите идеальное пространство для вашего следующего VR-опыта.</p>
+            </div>
+            <div class="footer-links">
+                <h3>Навигация</h3>
+                <ul>
+                    <li><a href="#">Главная</a></li>
+                    <li><a href="pages/catalog.html">Каталог комнат</a></li>
+                    <li><a href="pages/booking.html">Мои бронирования</a></li>
+                </ul>
+            </div>
+            <div class="footer-links">
+                <h3>Поддержка</h3>
+                <ul>
+                    <li><a href="#">Помощь</a></li>
+                    <li><a href="#">FAQ</a></li>
+                    <li><a href="#">Контакты</a></li>
+                    <li><a href="#">Условия использования</a></li>
+                </ul>
+            </div>
+            <div class="footer-links">
+                <h3>Социальные сети</h3>
+                <ul>
+                    <li><a href="#"><i class="fa-brands fa-vk"></i> VKontakte</a></li>
+                    <li><a href="#"><i class="fa-brands fa-telegram"></i> Telegram</a></li>
+                    <li><a href="#"><i class="fa-brands fa-youtube"></i> YouTube</a></li>
+                    <li><a href="#"><i class="fa-brands fa-discord"></i> Discord</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="copyright">
+            <p>&copy; 2025 MetaBook. Все права защищены.</p>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+    <script src="pages/script/auth-check.js"></script>
+</body>
+</html>

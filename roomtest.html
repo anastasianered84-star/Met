@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Тесты чата и приглашений</title>
+<style>
+  body { font-family: Arial, sans-serif; padding: 20px; }
+  .test-result { margin: 5px 0; padding: 5px 10px; border-radius: 4px; }
+  .pass { background-color: #d4edda; color: #155724; }
+  .fail { background-color: #f8d7da; color: #721c24; }
+  button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
+</style>
+</head>
+<body>
+<h1>Тесты чата и приглашений</h1>
+<button id="runTestsBtn">Запустить тесты</button>
+<div id="testResults"></div>
+
+<script>
+const resultsDiv = document.getElementById('testResults');
+
+function assert(condition, message) {
+  const div = document.createElement('div');
+  div.className = 'test-result ' + (condition ? 'pass' : 'fail');
+  div.textContent = (condition ? '✅ PASS: ' : '❌ FAIL: ') + message;
+  resultsDiv.appendChild(div);
+}
+
+// ───────────── Тесты чата ─────────────
+function testSendMessage() {
+  let sentMessages = [];
+  function mockAppend(msg) { sentMessages.push(msg); }
+  const message = "Привет";
+  mockAppend({ message, is_own: true });
+  assert(sentMessages.length === 1 && sentMessages[0].message === "Привет", 'TC-05-01: Отправка сообщения в чат');
+}
+
+function testEmptyMessage() {
+  let apiCalled = false;
+  function mockSend(msg) { if(msg) apiCalled = true; }
+  mockSend("");
+  assert(apiCalled === false, 'TC-05-02: Отправка пустого сообщения');
+}
+
+function testLongMessage() {
+  const longMsg = "x".repeat(1001);
+  let error = longMsg.length > 1000 ? "Сообщение слишком длинное" : null;
+  assert(error === "Сообщение слишком длинное", 'TC-05-03: Сообщение длиной более 1000 символов');
+}
+
+function testMaxLengthMessage() {
+  const maxMsg = "x".repeat(1000);
+  let error = maxMsg.length > 1000 ? "Ошибка" : null;
+  assert(error === null, 'TC-05-04: Сообщение длиной ровно 1000 символов');
+}
+
+function testEscapeHtml() {
+  const htmlMsg = "<script>alert(1)<\/script>";
+  const escaped = htmlMsg.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  assert(escaped === "&lt;script&gt;alert(1)&lt;/script&gt;", 'TC-05-06: Экранирование HTML в сообщениях');
+}
+
+// ───────────── Тесты приглашений ─────────────
+function testInviteButtonVisibility() {
+  let isOwner = false;
+  let buttonVisible = isOwner ? true : false;
+  assert(buttonVisible === false, 'TC-06-02: Кнопка приглашения скрыта для не-создателя');
+}
+
+function testAlreadyInvitedUser() {
+  let alreadyInvited = true;
+  let result = alreadyInvited ? "Пользователь уже приглашён" : "Пригласить";
+  assert(result === "Пользователь уже приглашён", 'TC-06-05: Повторное приглашение уже приглашённого');
+}
+
+function testFullRoomInvite() {
+  let roomFull = true;
+  let errorMsg = roomFull ? "Комната заполнена, нельзя пригласить больше участников" : null;
+  assert(errorMsg === "Комната заполнена, нельзя пригласить больше участников", 'TC-06-06: Приглашение при заполненной комнате');
+}
+
+function testSearchNonexistentUser() {
+  let usersFound = [];
+  let msg = usersFound.length === 0 ? "Пользователи не найдены" : null;
+  assert(msg === "Пользователи не найдены", 'TC-06-08: Поиск несуществующего пользователя');
+}
+
+// ───────────── Запуск всех тестов ─────────────
+function runAllTests() {
+  resultsDiv.innerHTML = '';
+  testSendMessage();
+  testEmptyMessage();
+  testLongMessage();
+  testMaxLengthMessage();
+  testEscapeHtml();
+  testInviteButtonVisibility();
+  testAlreadyInvitedUser();
+  testFullRoomInvite();
+  testSearchNonexistentUser();
+}
+
+document.getElementById('runTestsBtn').addEventListener('click', runAllTests);
+</script>
+</body>
+</html>

@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MetaBook - Регистрация аккаунта</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../style/styles.css">
+    <link rel="stylesheet" href="../style/auth.css">
+</head>
+<body>
+
+    <header>
+        <div class="header-container">
+            <div class="logo">
+                <img src="../images/logo.png" alt="MetaBook Logo" class="logo-image">
+            </div>
+            <nav>
+                <ul>
+                    <li><a href="../index.html">Главная</a></li>
+                    <li><a href="catalog.html">Каталог</a></li>
+                    <li><a href="booking.html">Мои бронирования</a></li>
+                </ul>
+            </nav>
+            <div class="user-actions">
+                <button class="btn btn-outline" onclick="location.href='login.html'">
+                    <i class="fa-solid fa-right-to-bracket"></i> Войти
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <section class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <h2>Создать аккаунт</h2>
+                <p>Заполните форму для регистрации в системе</p>
+            </div>
+            
+            <form class="auth-form" id="registerForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="firstName">Имя</label>
+                        <div class="input-with-icon">
+                            <i class="fa-solid fa-user"></i>
+                            <input type="text" id="firstName" placeholder="Ваше имя" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="lastName">Фамилия</label>
+                        <div class="input-with-icon">
+                            <i class="fa-solid fa-user"></i>
+                            <input type="text" id="lastName" placeholder="Ваша фамилия" required>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="regEmail">Email</label>
+                    <div class="input-with-icon">
+                        <i class="fa-solid fa-envelope"></i>
+                        <input type="email" id="regEmail" placeholder="Ваш email" required>
+                    </div>
+                </div>
+                
+                <!-- Блок для кода подтверждения (изначально скрыт) -->
+                <div class="form-group" id="codeGroup" style="display: none;">
+                    <label for="verificationCode">Код подтверждения</label>
+                    <div class="input-with-icon">
+                        <i class="fa-solid fa-key"></i>
+                        <input type="text" id="verificationCode" placeholder="Введите код из письма" maxlength="6">
+                    </div>
+                    <div id="timer" style="font-size: 12px; color: #818cf8; margin-top: 5px;"></div>
+                </div>
+                
+                <div class="form-group" id="passwordGroup" style="display: none;">
+                    <label for="regPassword">Пароль</label>
+                    <div class="input-with-icon">
+                        <i class="fa-solid fa-lock"></i>
+                        <input type="password" id="regPassword" placeholder="Придумайте пароль">
+                    </div>
+                    <div class="password-strength">
+                        <div class="strength-bar">
+                            <div class="strength-fill"></div>
+                        </div>
+                        <span class="strength-text">Надёжность пароля: низкая</span>
+                    </div>
+                </div>
+                
+                <div class="form-group" id="confirmGroup" style="display: none;">
+                    <label for="confirmPassword">Подтверждение пароля</label>
+                    <div class="input-with-icon">
+                        <i class="fa-solid fa-lock"></i>
+                        <input type="password" id="confirmPassword" placeholder="Повторите пароль">
+                    </div>
+                </div>
+                
+                <!-- Кнопка отправки кода -->
+                <button type="button" class="btn btn-primary" id="sendCodeBtn" style="width: 100%; margin-bottom: 1rem;">
+                    <i class="fa-solid fa-paper-plane"></i> Отправить код
+                </button>
+                
+                <!-- Кнопка регистрации (изначально скрыта) -->
+                <button type="submit" class="btn btn-primary auth-submit" id="registerBtn" style="display: none; width: 100%;">
+                    <i class="fa-solid fa-user-plus"></i> Зарегистрироваться
+                </button>
+                
+                <div class="form-options" id="formOptions" style="display: none;">
+                    <label class="checkbox-container">
+                        <input type="checkbox" id="agreeTerms" required>
+                        <span class="checkmark"></span>
+                        Я принимаю <a href="#">условия использования</a> и <a href="#">политику конфиденциальности</a>
+                    </label>
+                    
+                    <label class="checkbox-container">
+                        <input type="checkbox" id="newsletter">
+                        <span class="checkmark"></span>
+                        Подписаться на новости и специальные предложения
+                    </label>
+                </div>
+                
+                <div class="auth-divider" id="authDivider" style="display: none;">
+                    <span>или</span>
+                </div>
+                
+                <div class="social-auth" id="socialAuth" style="display: none;">
+                    <button type="button" class="btn btn-social btn-vk">
+                        <i class="fa-brands fa-vk"></i> ВКонтакте
+                    </button>
+                    <button type="button" class="btn btn-social btn-google">
+                        <i class="fa-brands fa-google"></i> Google
+                    </button>
+                </div>
+                
+                <div class="auth-footer">
+                    <p>Уже есть аккаунт? <a href="login.html">Войти</a></p>
+                </div>
+            </form>
+        </div>
+        
+        <div class="auth-decoration">
+            <div class="decoration-content">
+                <h3>Присоединяйтесь к MetaBook</h3>
+                <p>Зарегистрируйтесь, чтобы получить доступ к эксклюзивным VR-комнатам и специальным предложениям</p>
+                <div class="benefits-list">
+                    <div class="benefit-item">
+                        <i class="fa-solid fa-check"></i>
+                        <span>Доступ к сотням VR-комнат</span>
+                    </div>
+                    <div class="benefit-item">
+                        <i class="fa-solid fa-check"></i>
+                        <span>Управление бронированиями</span>
+                    </div>
+                    <div class="benefit-item">
+                        <i class="fa-solid fa-check"></i>
+                        <span>Создание собственных комнат</span>
+                    </div>
+                    <div class="benefit-item">
+                        <i class="fa-solid fa-check"></i>
+                        <span>Специальные предложения</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script src="script/auth.js"></script>
+</body>
+</html>

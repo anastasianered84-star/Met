@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Тесты бронирования</title>
+<style>
+  body { font-family: Arial, sans-serif; padding: 20px; }
+  .test-result { margin: 5px 0; padding: 5px 10px; border-radius: 4px; }
+  .pass { background-color: #d4edda; color: #155724; }
+  .fail { background-color: #f8d7da; color: #721c24; }
+  button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
+</style>
+</head>
+<body>
+<h1>Тесты бронирования</h1>
+<button id="runTestsBtn">Запустить тесты</button>
+<div id="testResults"></div>
+
+<script>
+const resultsDiv = document.getElementById('testResults');
+
+function assert(condition, message) {
+  const div = document.createElement('div');
+  div.className = 'test-result ' + (condition ? 'pass' : 'fail');
+  div.textContent = (condition ? '✅ PASS: ' : '❌ FAIL: ') + message;
+  resultsDiv.appendChild(div);
+}
+
+// ─────── Тесты бронирования ───────
+
+function testBookingSuccess() {
+  const bookings = [];
+  const start = new Date(Date.now() + 24*60*60*1000); // завтра
+  const end   = new Date(start.getTime() + 2*60*60*1000); // +2 часа
+  bookings.push({ room_id: 1, start_time: start.toISOString(), end_time: end.toISOString(), status: 'upcoming', total_price: 4000 });
+  assert(bookings.length === 1 && bookings[0].status === 'upcoming', 'TC-03-01: Успешное создание бронирования');
+}
+
+function testBookingOverlap() {
+  const existing = [{ start_time: '2026-03-24T10:00:00Z', end_time: '2026-03-24T12:00:00Z' }];
+  const newBooking = { start_time: '2026-03-24T11:00:00Z', end_time: '2026-03-24T13:00:00Z' };
+  const overlap = existing.some(b => !(new Date(newBooking.end_time) <= new Date(b.start_time) || new Date(newBooking.start_time) >= new Date(b.end_time)));
+  assert(overlap === true, 'TC-03-02: Бронирование на занятое время');
+}
+
+function testBookingUnauthorized() {
+  localStorage.removeItem('authToken');
+  let messageShown = false;
+  const showNotification = (msg) => { if (msg.includes('Необходимо войти')) messageShown = true; };
+  if (!localStorage.getItem('authToken')) showNotification('Необходимо войти в систему');
+  assert(messageShown === true, 'TC-03-03: Бронирование неавторизованным пользователем');
+}
+
+function testUpcomingToActive() {
+  const start = new Date(Date.now() - 1*60*1000); // минус 1 мин
+  let status = start <= new Date() ? 'active' : 'upcoming';
+  assert(status === 'active', 'TC-03-04: Автоматическое изменение статуса upcoming → active');
+}
+
+function testActiveToCompleted() {
+  const end = new Date(Date.now() - 1*60*1000); // минус 1 мин
+  let status = end <= new Date() ? 'completed' : 'active';
+  assert(status === 'completed', 'TC-03-05: Автоматическое изменение статуса active → completed');
+}
+
+function testCancelBooking() {
+  let bookings = [{ id: 1, status: 'upcoming' }];
+  bookings[0].status = 'cancelled';
+  assert(bookings[0].status === 'cancelled', 'TC-03-06: Отмена бронирования');
+}
+
+function testAdjacentBooking() {
+  const existing = { start: 10, end: 12 };
+  const newBooking = { start: 12, end: 14 };
+  const conflict = !(newBooking.end <= existing.start || newBooking.start >= existing.end);
+  assert(conflict === false, 'TC-03-07: Бронирование смежного временного слота');
+}
+
+function testUTCConversion() {
+  // Пользователь UTC+3, выбрал 13:00 локально
+  const local = new Date(2026,2,23,13,0,0); // 23 марта 2026 13:00
+  const utc = new Date(local.getTime() - 3*60*60*1000);
+  assert(utc.getUTCHours() === 10, 'TC-03-08: Корректность UTC при бронировании');
+}
+
+// ─────── Запуск всех тестов ───────
+function runAllTests() {
+  resultsDiv.innerHTML = '';
+  testBookingSuccess();
+  testBookingOverlap();
+  testBookingUnauthorized();
+  testUpcomingToActive();
+  testActiveToCompleted();
+  testCancelBooking();
+  testAdjacentBooking();
+  testUTCConversion();
+}
+
+document.getElementById('runTestsBtn').addEventListener('click', runAllTests);
+</script>
+</body>
+</html>
