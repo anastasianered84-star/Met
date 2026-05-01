@@ -1,5 +1,5 @@
-const API_BASE_URL = 'https://localhost:7255/api';
-const API_HOST = 'https://localhost:7255';
+const API_BASE_URL = 'https://metabook-production.up.railway.app/api';
+const API_HOST = 'https://metabook-production.up.railway.app';
 
 function getImageUrl(path) {
     if (!path || path === 'qwe') return 'https://images.unsplash.com/photo-1593118247619-e2d6f056869e?w=600';
@@ -20,6 +20,9 @@ function getCurrentUser() {
 function isAuthenticated() {
     return localStorage.getItem('authToken') !== null && localStorage.getItem('userId') !== null;
 }
+
+// Переменные для хранения данных бронирования перед оплатой
+let pendingBooking = null;
 
 document.addEventListener('DOMContentLoaded', async function() {
     await loadRooms();
@@ -93,11 +96,15 @@ document.addEventListener('DOMContentLoaded', async function() {
         bookingForm.addEventListener('submit', handleBookingSubmit);
     }
     
-    // Закрытие модального окна при клике вне его
+    // Закрытие модальных окон при клике вне их
     window.onclick = function(event) {
         const modal = document.getElementById('bookingModal');
         if (event.target === modal) {
             closeBookingModal();
+        }
+        const paymentModal = document.getElementById('paymentModal');
+        if (event.target === paymentModal) {
+            closePaymentModal();
         }
     }
     
@@ -113,6 +120,18 @@ document.addEventListener('DOMContentLoaded', async function() {
     const durationSelect = document.getElementById('duration');
     if (durationSelect) {
         durationSelect.addEventListener('change', calculatePrice);
+    }
+    
+    // Добавляем CSS для анимации спиннера
+    if (!document.querySelector('#payment-styles')) {
+        const style = document.createElement('style');
+        style.id = 'payment-styles';
+        style.textContent = `
+            @keyframes spin {
+                to { transform: rotate(360deg); }
+            }
+        `;
+        document.head.appendChild(style);
     }
 });
 
@@ -264,6 +283,247 @@ function calculatePrice() {
     }
 }
 
+// Открытие модального окна оплаты
+function openPaymentModal(bookingData) {
+    pendingBooking = bookingData;
+    
+    // Заполняем данные
+    document.getElementById('paymentRoomName').textContent = bookingData.roomName;
+    document.getElementById('paymentDateTime').textContent = bookingData.dateTime;
+    document.getElementById('paymentDuration').textContent = bookingData.duration + ' ' + getHoursWord(bookingData.duration);
+    document.getElementById('paymentAmount').textContent = bookingData.totalPrice + ' ₽';
+    
+    // Показываем модальное окно
+    document.getElementById('paymentModal').style.display = 'flex';
+    
+    // Обработчики переключения методов оплаты
+    const cardRadio = document.querySelector('input[value="card"]');
+    const sbpRadio = document.querySelector('input[value="sbp"]');
+    const balanceRadio = document.querySelector('input[value="balance"]');
+    const cardForm = document.getElementById('cardForm');
+    const sbpForm = document.getElementById('sbpForm');
+    
+    const handleMethodChange = () => {
+        if (cardRadio.checked) {
+            cardForm.style.display = 'block';
+            sbpForm.style.display = 'none';
+        } else if (sbpRadio.checked) {
+            cardForm.style.display = 'none';
+            sbpForm.style.display = 'block';
+        } else {
+            cardForm.style.display = 'none';
+            sbpForm.style.display = 'none';
+        }
+    };
+    
+    cardRadio.addEventListener('change', handleMethodChange);
+    sbpRadio.addEventListener('change', handleMethodChange);
+    balanceRadio.addEventListener('change', handleMethodChange);
+    handleMethodChange();
+    
+    // Форматирование номера карты
+    const cardNumber = document.getElementById('cardNumber');
+    cardNumber.addEventListener('input', function(e) {
+        let value = e.target.value.replace(/\D/g, '');
+        value = value.replace(/(\d{4})(?=\d)/g, '$1 ');
+        e.target.value = value.substring(0, 19);
+    });
+    
+    // Форматирование срока действия
+    const cardExpiry = document.getElementById('cardExpiry');
+    cardExpiry.addEventListener('input', function(e) {
+        let value = e.target.value.replace(/\D/g, '');
+        if (value.length >= 2) {
+            value = value.substring(0, 2) + '/' + value.substring(2, 4);
+        }
+        e.target.value = value.substring(0, 5);
+    });
+    
+    // Только цифры для CVV
+    const cardCvv = document.getElementById('cardCvv');
+    cardCvv.addEventListener('input', function(e) {
+        e.target.value = e.target.value.replace(/\D/g, '').substring(0, 3);
+    });
+    
+    // Форматирование телефона
+    const phoneNumber = document.getElementById('phoneNumber');
+    phoneNumber.addEventListener('input', function(e) {
+        let value = e.target.value.replace(/\D/g, '');
+        if (value.length > 0) {
+            let formatted = '+7';
+            if (value.length > 1) formatted += ' (' + value.substring(1, 4);
+            if (value.length >= 4) formatted += ') ' + value.substring(4, 7);
+            if (value.length >= 7) formatted += '-' + value.substring(7, 9);
+            if (value.length >= 9) formatted += '-' + value.substring(9, 11);
+            e.target.value = formatted;
+        }
+    });
+}
+
+function closePaymentModal() {
+    document.getElementById('paymentModal').style.display = 'none';
+    pendingBooking = null;
+}
+
+// Имитация обработки платежа
+async function processPayment() {
+    const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked').value;
+    
+    // Валидация в зависимости от метода оплаты
+    if (paymentMethod === 'card') {
+        const cardNumber = document.getElementById('cardNumber').value.replace(/\s/g, '');
+        const cardExpiry = document.getElementById('cardExpiry').value;
+        const cardCvv = document.getElementById('cardCvv').value;
+        
+        if (cardNumber.length !== 16) {
+            showNotification('Введите корректный номер карты (16 цифр)', 'error');
+            return;
+        }
+        if (!cardExpiry.match(/^\d{2}\/\d{2}$/)) {
+            showNotification('Введите корректный срок действия (MM/YY)', 'error');
+            return;
+        }
+        if (cardCvv.length !== 3) {
+            showNotification('Введите корректный CVV код (3 цифры)', 'error');
+            return;
+        }
+    }
+    
+    if (paymentMethod === 'sbp') {
+        const phone = document.getElementById('phoneNumber').value;
+        if (!phone.match(/^\+7 \(\d{3}\) \d{3}-\d{2}-\d{2}$/)) {
+            showNotification('Введите корректный номер телефона', 'error');
+            return;
+        }
+    }
+    
+    // Показываем лоадер
+    const payButton = document.getElementById('payButton');
+    const paymentLoader = document.getElementById('paymentLoader');
+    const paymentDetails = document.getElementById('paymentDetails');
+    
+    payButton.style.display = 'none';
+    paymentDetails.style.display = 'none';
+    paymentLoader.style.display = 'block';
+    
+    // Имитация задержки обработки платежа (1-2 секунды)
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    // Имитация успешной оплаты (95% успеха)
+    const isSuccess = Math.random() < 0.95;
+    
+    if (isSuccess) {
+        // Успешная оплата - отправляем бронирование на сервер
+        await completeBooking();
+    } else {
+        // Ошибка оплаты
+        paymentLoader.style.display = 'none';
+        paymentDetails.style.display = 'block';
+        payButton.style.display = 'block';
+        showNotification('Ошибка оплаты. Попробуйте другую карту.', 'error');
+    }
+}
+
+// Завершение бронирования после успешной оплаты
+async function completeBooking() {
+    if (!pendingBooking) {
+        showNotification('Ошибка: данные бронирования не найдены', 'error');
+        closePaymentModal();
+        return;
+    }
+    
+    const user = getCurrentUser();
+    if (!user) {
+        showNotification('Необходимо войти в систему', 'error');
+        closePaymentModal();
+        setTimeout(() => {
+            window.location.href = 'login.html';
+        }, 1500);
+        return;
+    }
+    
+    try {
+        const formData = new FormData();
+        formData.append('roomId', pendingBooking.roomId);
+        formData.append('userId', user.userId);
+        formData.append('startTime', pendingBooking.startDateTime.toISOString());
+        formData.append('endTime', pendingBooking.endDateTime.toISOString());
+        formData.append('specialRequests', `Количество участников: ${pendingBooking.participants}. ${pendingBooking.specialRequests || ''}`);
+        
+        const response = await fetch(`${API_BASE_URL}/Room/book`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${user.token}`
+            },
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+            // Скрываем лоадер и показываем успех
+            const paymentLoader = document.getElementById('paymentLoader');
+            paymentLoader.innerHTML = `
+                <i class="fa-solid fa-check-circle" style="font-size: 48px; color: #10b981; margin-bottom: 15px;"></i>
+                <p style="color: #10b981;">Оплата прошла успешно!</p>
+                <p style="color: rgba(255,255,255,0.7); font-size: 14px;">Перенаправление...</p>
+            `;
+            
+            // Сохраняем в историю платежей (localStorage)
+            savePaymentToHistory({
+                id: data.booking_id,
+                roomName: pendingBooking.roomName,
+                amount: pendingBooking.totalPrice,
+                date: new Date().toISOString(),
+                status: 'success'
+            });
+            
+            setTimeout(() => {
+                closePaymentModal();
+                showNotification(`✅ Комната "${pendingBooking.roomName}" успешно забронирована!`, 'success');
+                
+                setTimeout(() => {
+                    if (confirm('Перейти в забронированную комнату?')) {
+                        window.location.href = `room.html?id=${pendingBooking.roomId}`;
+                    }
+                }, 500);
+            }, 2000);
+        } else {
+            throw new Error(data.message || 'Ошибка при бронировании');
+        }
+    } catch (error) {
+        console.error('Booking error:', error);
+        
+        const paymentLoader = document.getElementById('paymentLoader');
+        paymentLoader.innerHTML = `
+            <i class="fa-solid fa-exclamation-circle" style="font-size: 48px; color: #ef4444; margin-bottom: 15px;"></i>
+            <p style="color: #ef4444;">Ошибка бронирования!</p>
+            <p style="color: rgba(255,255,255,0.7); font-size: 14px;">${error.message}</p>
+        `;
+        
+        setTimeout(() => {
+            closePaymentModal();
+            showNotification(error.message, 'error');
+        }, 2000);
+    }
+}
+
+// Сохранение истории платежей
+function savePaymentToHistory(payment) {
+    let history = JSON.parse(localStorage.getItem('paymentHistory') || '[]');
+    history.unshift(payment);
+    if (history.length > 20) history.pop();
+    localStorage.setItem('paymentHistory', JSON.stringify(history));
+}
+
+// Вспомогательная функция для склонения часов
+function getHoursWord(hours) {
+    if (hours === 1) return 'час';
+    if (hours >= 2 && hours <= 4) return 'часа';
+    return 'часов';
+}
+
+// Обработчик формы бронирования - собирает данные и открывает окно оплаты
 async function handleBookingSubmit(e) {
     e.preventDefault();
     
@@ -279,6 +539,7 @@ async function handleBookingSubmit(e) {
     const modal = document.getElementById('bookingModal');
     const roomId = modal.dataset.roomId;
     const roomName = modal.dataset.roomName;
+    const pricePerHour = parseFloat(modal.dataset.pricePerHour);
     
     if (!roomId) {
         showNotification('Ошибка: комната не выбрана', 'error');
@@ -290,6 +551,7 @@ async function handleBookingSubmit(e) {
     const duration = parseInt(document.getElementById('duration').value);
     const participants = parseInt(document.getElementById('participants').value);
     const specialRequests = document.getElementById('specialRequests')?.value || '';
+    const totalPrice = duration * pricePerHour;
     const maxParticipants = parseInt(modal.dataset.maxParticipants);
     
     // Валидация
@@ -319,49 +581,34 @@ async function handleBookingSubmit(e) {
     
     const endDateTime = new Date(startDateTime.getTime() + duration * 60 * 60 * 1000);
     
-    const submitBtn = e.target.querySelector('button[type="submit"]');
-    const originalText = submitBtn.innerHTML;
+    // Форматируем дату для отображения
+    const dateTimeStr = startDateTime.toLocaleString('ru-RU', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
     
-    try {
-        submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Бронирование...';
-        submitBtn.disabled = true;
-        
-        const formData = new FormData();
-        formData.append('roomId', roomId);
-        formData.append('userId', user.userId);
-        formData.append('startTime', startDateTime.toISOString());
-        formData.append('endTime', endDateTime.toISOString());
-        formData.append('specialRequests', `Количество участников: ${participants}. ${specialRequests}`);
-        
-        const response = await fetch(`${API_BASE_URL}/Room/book`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${user.token}`
-            },
-            body: formData
-        });
-        
-        const data = await response.json();
-        
-        if (response.ok && data.success) {
-            showNotification(`✅ Комната "${roomName}" успешно забронирована!`, 'success');
-            closeBookingModal();
-            
-            setTimeout(() => {
-                if (confirm('Перейти в забронированную комнату?')) {
-                    window.location.href = `room.html?id=${roomId}`;
-                }
-            }, 500);
-        } else {
-            throw new Error(data.message || 'Ошибка при бронировании');
-        }
-    } catch (error) {
-        console.error('Booking error:', error);
-        showNotification(`❌ Ошибка: ${error.message}`, 'error');
-    } finally {
-        submitBtn.innerHTML = originalText;
-        submitBtn.disabled = false;
-    }
+    // Сохраняем данные бронирования для оплаты
+    const bookingData = {
+        roomId: roomId,
+        roomName: roomName,
+        dateTime: dateTimeStr,
+        duration: duration,
+        participants: participants,
+        specialRequests: specialRequests,
+        totalPrice: totalPrice,
+        startDateTime: startDateTime,
+        endDateTime: endDateTime,
+        pricePerHour: pricePerHour
+    };
+    
+    // Закрываем модальное окно бронирования
+    closeBookingModal();
+    
+    // Открываем модальное окно оплаты
+    openPaymentModal(bookingData);
 }
 
 // Фильтрация комнат
@@ -386,7 +633,6 @@ function filterRooms() {
         } else if (capacityText.includes('10+')) {
             filteredRooms = filteredRooms.filter(room => room.max_capacity > 10);
         }
-        // "Все" - не фильтруем
     }
     
     // Поиск по названию и описанию
@@ -404,14 +650,12 @@ function filterRooms() {
 }
 
 function resetFilters() {
-    // Сброс фильтра по цене
     const priceRange = document.getElementById('priceRange');
     if (priceRange) {
         priceRange.value = 1000;
         document.getElementById('priceValue').textContent = '1000₽';
     }
     
-    // Сброс фильтра по вместимости
     document.querySelectorAll('.capacity-option').forEach(option => {
         if (option.textContent.includes('5-10')) {
             option.classList.add('active');
@@ -420,13 +664,11 @@ function resetFilters() {
         }
     });
     
-    // Сброс поиска
     const searchInput = document.querySelector('.search-box input');
     if (searchInput) {
         searchInput.value = '';
     }
     
-    // Отображаем все комнаты
     displayRooms(allRooms);
     updateResultsCount(allRooms.length);
 }
@@ -509,7 +751,7 @@ function showNotification(message, type = 'info') {
     notification.className = `notification`;
     notification.innerHTML = `
         <i class="fa-solid ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'}"></i>
-        <span>${message}</span>
+        <span>${escapeHtml(message)}</span>
     `;
     
     const colors = {
@@ -565,6 +807,10 @@ if (!document.querySelector('#notification-styles')) {
                 transform: translateX(0);
                 opacity: 1;
             }
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
         
         .no-results {

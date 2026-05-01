@@ -78,145 +78,14 @@
     </section>
 
     <!-- Rooms Grid -->
-    <!-- Rooms Grid -->
-<section class="container">
-    <h2 class="section-title">Популярные VR комнаты</h2>
-    <div class="rooms-grid">
-        <!-- Room 1 -->
-        <div class="room-card">
-            <div class="room-image">
-                <img src="images/room1.jpeg" alt="Киберпанк-лаунж">
-                <div class="room-badge popular">Популярное</div>
-                <button class="favorite-btn">
-                    <i class="fa-regular fa-heart"></i>
-                </button>
-            </div>
-            <div class="room-content">
-                <h3 class="room-title">Киберпанк-лаунж</h3>
-                <div class="room-rating">
-                    <i class="fa-solid fa-star"></i>
-                    <i class="fa-solid fa-star"></i>
-                    <i class="fa-solid fa-star"></i>
-                    <i class="fa-solid fa-star"></i>
-                    <i class="fa-solid fa-star-half-alt"></i>
-                    <span>(4.5)</span>
-                </div>
-                <p class="room-description">Погрузитесь в атмосферу неонового будущего с панорамным видом на ночной город.</p>
-                <div class="room-features">
-                    <span class="feature-tag"><i class="fa-solid fa-wifi"></i> VR Ready</span>
-                    <span class="feature-tag"><i class="fa-solid fa-microphone"></i> Голосовой чат</span>
-                </div>
-                <div class="room-meta">
-                    <div class="room-capacity">
-                        <i class="fa-solid fa-user-group"></i> до 8 человек
-                    </div>
-                    <div class="room-price">
-                        <span class="current-price">350₽</span>
-                        <span class="price-period">/час</span>
-                    </div>
-                </div>
-                <div class="room-actions">
-                    <button class="btn btn-outline btn-details" onclick="viewRoomDetails(1)">
-                        <i class="fa-regular fa-eye"></i> Детали
-                    </button>
-                    <button class="btn btn-primary" onclick="openBookingModal('Киберпанк-лаунж', 8)">
-                        <i class="fa-regular fa-calendar-check"></i> Забронировать
-                    </button>
-                </div>
-            </div>
+    <section class="container">
+        <h2 class="section-title">Популярные VR комнаты</h2>
+        <div class="rooms-grid" id="roomsContainer">
+            <!-- Комнаты загружаются через JS -->
         </div>
+    </section>
 
-        <!-- Room 2 -->
-        <div class="room-card">
-            <div class="room-image">
-                <img src="https://images.unsplash.com/photo-1446776653964-20c1d3a81b06?q=80&w=1742&auto=format&fit=crop" alt="Космическая станция">
-                <div class="room-badge new">Новинка</div>
-                <button class="favorite-btn">
-                    <i class="fa-regular fa-heart"></i>
-                </button>
-            </div>
-            <div class="room-content">
-                <h3 class="room-title">Космическая станция</h3>
-                <div class="room-rating">
-                    <i class="fa-solid fa-star"></i>
-                    <i class="fa-solid fa-star"></i>
-                    <i class="fa-solid fa-star"></i>
-                    <i class="fa-solid fa-star"></i>
-                    <i class="fa-regular fa-star"></i>
-                    <span>(4.0)</span>
-                </div>
-                <p class="room-description">Исследуйте космос с панорамным видом на Землю и звезды в реалистичной космической станции.</p>
-                <div class="room-features">
-                    <span class="feature-tag"><i class="fa-solid fa-rocket"></i> Невесомость</span>
-                    <span class="feature-tag"><i class="fa-solid fa-gamepad"></i> Квесты</span>
-                </div>
-                <div class="room-meta">
-                    <div class="room-capacity">
-                        <i class="fa-solid fa-user-group"></i> до 12 человек
-                    </div>
-                    <div class="room-price">
-                        <span class="current-price">500₽</span>
-                        <span class="price-period">/час</span>
-                    </div>
-                </div>
-                <div class="room-actions">
-                    <button class="btn btn-outline btn-details" onclick="viewRoomDetails(2)">
-                        <i class="fa-regular fa-eye"></i> Детали
-                    </button>
-                    <button class="btn btn-primary" onclick="openBookingModal('Космическая станция', 12)">
-                        <i class="fa-regular fa-calendar-check"></i> Забронировать
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Room 3 -->
-        <div class="room-card">
-            <div class="room-image">
-                <img src="images/room2.jpeg" alt="Природный оазис">
-                <div class="room-badge free">Бесплатно</div>
-                <button class="favorite-btn">
-                    <i class="fa-regular fa-heart"></i>
-                </button>
-            </div>
-            <div class="room-content">
-                <h3 class="room-title">Природный оазис</h3>
-                <div class="room-rating">
-                    <i class="fa-solid fa-star"></i>
-                    <i class="fa-solid fa-star"></i>
-                    <i class="fa-solid fa-star"></i>
-                    <i class="fa-solid fa-star"></i>
-                    <i class="fa-solid fa-star"></i>
-                    <span>(5.0)</span>
-                </div>
-                <p class="room-description">Расслабляющая атмосфера тропического леса с водопадом и экзотическими животными.</p>
-                <div class="room-features">
-                    <span class="feature-tag"><i class="fa-solid fa-tree"></i> Природа</span>
-                    <span class="feature-tag"><i class="fa-solid fa-water"></i> Водопад</span>
-                </div>
-                <div class="room-meta">
-                    <div class="room-capacity">
-                        <i class="fa-solid fa-user-group"></i> до 6 человек
-                    </div>
-                    <div class="room-price">
-                        <span class="current-price free-price">0₽</span>
-                        <span class="price-period">/час</span>
-                    </div>
-                </div>
-                <div class="room-actions">
-                    <button class="btn btn-outline btn-details" onclick="viewRoomDetails(3)">
-                        <i class="fa-regular fa-eye"></i> Детали
-                    </button>
-                    <button class="btn btn-primary" onclick="openBookingModal('Природный оазис', 6)">
-                        <i class="fa-regular fa-calendar-check"></i> Забронировать
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-    <!-- Booking Modal -->
+    <!-- Модальное окно бронирования -->
     <div class="modal" id="bookingModal">
         <div class="modal-content">
             <button class="close-modal" onclick="closeBookingModal()">&times;</button>
@@ -248,10 +117,103 @@
                     <label for="participants">Количество участников</label>
                     <input type="number" id="participants" min="1" value="1" required>
                 </div>
+                <div class="form-group">
+                    <label for="specialRequests">Особые пожелания</label>
+                    <textarea id="specialRequests" rows="3" placeholder="Дополнительные требования или пожелания..."></textarea>
+                </div>
+                <div class="booking-summary">
+                    <h4>Стоимость: <span id="bookingPrice">0₽</span></h4>
+                </div>
                 <button type="submit" class="btn btn-primary" style="width: 100%;">
-                    <i class="fa-solid fa-lock"></i> Подтвердить бронирование
+                    <i class="fa-solid fa-calendar-check"></i> Подтвердить бронирование
                 </button>
             </form>
+        </div>
+    </div>
+
+    <!-- Модальное окно оплаты -->
+    <div class="modal" id="paymentModal">
+        <div class="modal-content" style="max-width: 500px;">
+            <button class="close-modal" onclick="closePaymentModal()">&times;</button>
+            <h2 class="modal-title">Оплата бронирования</h2>
+            
+            <div id="paymentDetails" style="margin-bottom: 20px;">
+                <div style="background: rgba(99,102,241,0.1); border-radius: 12px; padding: 15px; margin-bottom: 20px;">
+                    <p style="margin: 0 0 5px; color: rgba(255,255,255,0.6);">Комната:</p>
+                    <p style="margin: 0 0 15px; font-size: 18px; font-weight: 600; color: #fff;" id="paymentRoomName">-</p>
+                    <p style="margin: 0 0 5px; color: rgba(255,255,255,0.6);">Дата и время:</p>
+                    <p style="margin: 0 0 15px;" id="paymentDateTime">-</p>
+                    <p style="margin: 0 0 5px; color: rgba(255,255,255,0.6);">Длительность:</p>
+                    <p style="margin: 0 0 15px;" id="paymentDuration">-</p>
+                    <p style="margin: 0 0 5px; color: rgba(255,255,255,0.6);">К оплате:</p>
+                    <p style="margin: 0; font-size: 28px; font-weight: bold; color: #10b981;" id="paymentAmount">0 ₽</p>
+                </div>
+            </div>
+            
+            <div>
+                <h4 style="margin-bottom: 15px;">Способ оплаты</h4>
+                <div class="payment-methods" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
+                    <label class="payment-method" style="display: flex; align-items: center; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 8px; cursor: pointer; border: 1px solid transparent; transition: all 0.2s;">
+                        <input type="radio" name="paymentMethod" value="card" checked style="margin-right: 12px;">
+                        <i class="fa-brands fa-cc-visa" style="font-size: 24px; margin-right: 12px; color: #818cf8;"></i>
+                        <span>Банковская карта (Visa/Mastercard)</span>
+                    </label>
+                    
+                    <label class="payment-method" style="display: flex; align-items: center; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 8px; cursor: pointer; border: 1px solid transparent; transition: all 0.2s;">
+                        <input type="radio" name="paymentMethod" value="sbp" style="margin-right: 12px;">
+                        <i class="fa-solid fa-mobile-alt" style="font-size: 24px; margin-right: 12px; color: #818cf8;"></i>
+                        <span>СБП (Система быстрых платежей)</span>
+                    </label>
+                    
+                    <label class="payment-method" style="display: flex; align-items: center; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 8px; cursor: pointer; border: 1px solid transparent; transition: all 0.2s;">
+                        <input type="radio" name="paymentMethod" value="balance" style="margin-right: 12px;">
+                        <i class="fa-solid fa-wallet" style="font-size: 24px; margin-right: 12px; color: #818cf8;"></i>
+                        <span>Баланс MetaBook (0 ₽)</span>
+                    </label>
+                </div>
+            </div>
+            
+            <!-- Форма для карты -->
+            <div id="cardForm" style="margin-bottom: 20px;">
+                <div class="form-group">
+                    <label>Номер карты</label>
+                    <input type="text" id="cardNumber" placeholder="0000 0000 0000 0000" maxlength="19" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.05); color: white;">
+                </div>
+                <div style="display: flex; gap: 15px;">
+                    <div class="form-group" style="flex: 1;">
+                        <label>Срок действия</label>
+                        <input type="text" id="cardExpiry" placeholder="MM/YY" maxlength="5" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.05); color: white;">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label>CVV</label>
+                        <input type="password" id="cardCvv" placeholder="***" maxlength="3" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.05); color: white;">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Форма для СБП -->
+            <div id="sbpForm" style="display: none; margin-bottom: 20px;">
+                <div class="form-group">
+                    <label>Номер телефона</label>
+                    <input type="tel" id="phoneNumber" placeholder="+7 (___) ___-__-__" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.05); color: white;">
+                </div>
+                <p style="font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 8px;">На ваш телефон придёт SMS с подтверждением оплаты</p>
+            </div>
+            
+            <div class="payment-actions" style="display: flex; gap: 15px;">
+                <button class="btn btn-outline" onclick="closePaymentModal()" style="flex: 1;">
+                    Отмена
+                </button>
+                <button class="btn btn-primary" id="payButton" onclick="processPayment()" style="flex: 1;">
+                    <i class="fa-solid fa-credit-card"></i> Оплатить
+                </button>
+            </div>
+            
+            <!-- Имитация оплаты (анимация) -->
+            <div id="paymentLoader" style="display: none; text-align: center; padding: 20px;">
+                <div class="spinner" style="width: 40px; height: 40px; border: 3px solid rgba(99,102,241,0.3); border-top-color: #6366f1; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 15px;"></div>
+                <p style="color: rgba(255,255,255,0.7);">Обработка платежа...</p>
+            </div>
         </div>
     </div>
 

@@ -1,4 +1,5 @@
-const API_BASE_URL = 'https://localhost:7255/api';
+const API_BASE_URL = 'https://metabook-production.up.railway.app/api';
+const API_HOST = 'https://metabook-production.up.railway.app';
 
 // Кэш для названий комнат
 let roomsCache = {};
