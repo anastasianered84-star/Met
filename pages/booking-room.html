@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MetaBook - Бронирование комнаты</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../style/styles.css">
+    <link rel="stylesheet" href="../style/booking-room.css">
+</head>
+<body>
+
+    <header>
+        <div class="header-container">
+            <div class="logo">
+                <img src="../images/logo.png" alt="MetaBook Logo" class="logo-image">
+            </div>
+            <nav>
+                <ul>
+                    <li><a href="../index.html">Главная</a></li>
+                    <li><a href="catalog.html">Каталог</a></li>
+                    <li><a href="booking.html">Мои бронирования</a></li>
+                </ul>
+            </nav>
+            <div class="user-actions">
+                <button class="btn btn-outline" onclick="location.href='login.html'">
+                    <i class="fa-solid fa-user"></i> Войти
+                </button>
+                <button class="btn btn-primary" onclick="location.href='register.html'">
+                    <i class="fa-solid fa-user-plus"></i> Регистрация
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="booking-page-container">
+        <a href="catalog.html" class="btn-back">
+            <i class="fa-solid fa-arrow-left"></i> Назад к каталогу
+        </a>
+
+        <div class="booking-page-header">
+            <h1 id="roomTitle">Бронирование комнаты</h1>
+            <p>Выберите дату, время и заполните форму</p>
+        </div>
+
+        <div class="booking-grid">
+            <!-- Календарь -->
+            <div class="calendar-card">
+                <div class="calendar-header">
+                    <h2><i class="fa-regular fa-calendar"></i> Выберите дату</h2>
+                    <div class="calendar-nav">
+                        <button id="prevMonthBtn"><i class="fa-solid fa-chevron-left"></i></button>
+                        <button id="nextMonthBtn"><i class="fa-solid fa-chevron-right"></i></button>
+                    </div>
+                </div>
+                <div class="calendar-weekdays">
+                    <span>Пн</span><span>Вт</span><span>Ср</span><span>Чт</span>
+                    <span>Пт</span><span>Сб</span><span>Вс</span>
+                </div>
+                <div class="calendar-days" id="calendarDays">
+                    <div style="text-align: center; padding: 20px; color: rgba(255,255,255,0.5);">Загрузка...</div>
+                </div>
+            </div>
+
+            <!-- Временные слоты -->
+            <div class="time-slots-card">
+                <div class="time-slots-title">
+                    <i class="fa-regular fa-clock"></i> Доступное время
+                    <span class="selected-date-info" id="selectedDateInfo"></span>
+                </div>
+                <div class="time-slots-grid" id="timeSlotsGrid">
+                    <p style="color: rgba(255,255,255,0.5);">Выберите дату в календаре</p>
+                </div>
+            </div>
+
+            <!-- Форма бронирования -->
+            <div class="booking-form-card">
+                <div class="room-info" id="roomInfo">
+                    <h3><i class="fa-solid fa-cube"></i> <span id="roomName">-</span></h3>
+                    <p><i class="fa-solid fa-users"></i> Вместимость: до <span id="roomCapacity">-</span> человек</p>
+                    <p><i class="fa-solid fa-ruble-sign"></i> <span id="roomPrice">-</span> ₽/час</p>
+                </div>
+
+                <form id="bookingForm">
+                    <input type="hidden" id="roomId">
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Дата бронирования</label>
+                            <input type="date" id="bookingDate" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label>Время начала</label>
+                            <input type="time" id="startTime" readonly>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Длительность (часы)</label>
+                        <select id="duration">
+                            <option value="1">1 час</option>
+                            <option value="2">2 часа</option>
+                            <option value="3">3 часа</option>
+                            <option value="4">4 часа</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Количество участников</label>
+                        <input type="number" id="participants" min="1" value="1">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Особые пожелания</label>
+                        <textarea id="specialRequests" rows="3" placeholder="Дополнительные требования..."></textarea>
+                    </div>
+
+                    <div class="booking-summary">
+                        <h4>Стоимость: <span id="totalPrice">0 ₽</span></h4>
+                    </div>
+
+                    <button type="submit" class="btn-submit">
+                        <i class="fa-regular fa-credit-card"></i> Перейти к оплате
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно оплаты -->
+    <div class="modal" id="paymentModal">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closePaymentModal()">&times;</button>
+            <h2 class="modal-title">Оплата бронирования</h2>
+            <div id="paymentDetails" style="margin-bottom: 20px;">
+                <div style="background: rgba(99,102,241,0.1); border-radius: 12px; padding: 15px;">
+                    <p style="margin: 0 0 5px; color: rgba(255,255,255,0.6);">Комната:</p>
+                    <p style="margin: 0 0 15px; font-size: 18px; font-weight: 600; color: #fff;" id="paymentRoomName">-</p>
+                    <p style="margin: 0 0 5px; color: rgba(255,255,255,0.6);">Дата и время:</p>
+                    <p style="margin: 0 0 15px;" id="paymentDateTime">-</p>
+                    <p style="margin: 0 0 5px; color: rgba(255,255,255,0.6);">К оплате:</p>
+                    <p style="margin: 0; font-size: 28px; font-weight: bold; color: #10b981;" id="paymentAmount">0 ₽</p>
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="processPayment()" style="width: 100%;">
+                <i class="fa-solid fa-credit-card"></i> Оплатить
+            </button>
+            <div id="paymentLoader" style="display: none; text-align: center; padding: 20px;">
+                <div class="spinner"></div>
+                <p>Обработка...</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="script/booking-room.js"></script>
+    <script src="script/auth-check.js"></script>
+</body>
+<script src="script/auth.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', async function() {
+        const token = localStorage.getItem('authToken');
+        const userId = localStorage.getItem('userId');
+        await updateAuthUI(token, userId);
+    });
+</script>
+</html>
