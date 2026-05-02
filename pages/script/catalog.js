@@ -24,6 +24,12 @@ function isAuthenticated() {
 // Переменные для хранения данных бронирования перед оплатой
 let pendingBooking = null;
 
+// Переменные для календаря
+let currentCalendarRoomId = null;
+let bookedSlots = {};
+let selectedDate = null;
+let selectedHour = null;
+
 document.addEventListener('DOMContentLoaded', async function() {
     await loadRooms();
     
@@ -36,180 +42,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             filterRooms();
         });
     }
-    let currentDate = new Date();
-let currentRoomId = null;
-let bookedSlots = {};
-let selectedDate = null;
-let selectedHour = null;
-
-// Функции календаря
-async function loadCalendar(roomId, year, month) {
-    currentRoomId = roomId;
     
-    try {
-        const response = await fetch(`${API_BASE_URL}/Room/${roomId}/booked-slots?year=${year}&month=${month}`);
-        const data = await response.json();
-        
-        if (data.success) {
-            bookedSlots = data.bookedSlots;
-            renderCalendar(year, month);
-        }
-    } catch (error) {
-        console.error('Error loading calendar:', error);
-    }
-}
-
-function renderCalendar(year, month) {
-    const firstDayOfMonth = new Date(year, month - 1, 1);
-    const lastDayOfMonth = new Date(year, month, 0);
-    const startDayOfWeek = firstDayOfMonth.getDay() || 7; // Понедельник = 1
-    
-    const monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
-                        'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
-    document.getElementById('currentMonthYear').textContent = `${monthNames[month - 1]} ${year}`;
-    
-    const daysContainer = document.getElementById('calendarDays');
-    daysContainer.innerHTML = '';
-    
-    // Пустые ячейки для начала месяца
-    for (let i = 1; i < startDayOfWeek; i++) {
-        const emptyCell = document.createElement('div');
-        emptyCell.className = 'calendar-day';
-        emptyCell.style.opacity = '0';
-        daysContainer.appendChild(emptyCell);
-    }
-    
-    // Дни месяца
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    for (let day = 1; day <= lastDayOfMonth.getDate(); day++) {
-        const cellDate = new Date(year, month - 1, day);
-        const isPast = cellDate < today;
-        const dateKey = cellDate.toISOString().split('T')[0];
-        const dayBookings = bookedSlots[dateKey] || [];
-        
-        const dayCell = document.createElement('div');
-        dayCell.className = 'calendar-day';
-        
-        // Определяем статус дня
-        if (isPast) {
-            dayCell.classList.add('fully-booked');
-        } else if (dayBookings.length === 0) {
-            dayCell.classList.add('free');
-        } else {
-            // Проверяем, полностью ли занят день
-            const bookedHours = new Set();
-            dayBookings.forEach(booking => {
-                for (let h = booking.startHour; h < booking.endHour; h++) {
-                    bookedHours.add(h);
-                }
-            });
-            
-            // Рабочие часы 8-23
-            const totalWorkHours = 15;
-            if (bookedHours.size >= totalWorkHours) {
-                dayCell.classList.add('fully-booked');
-            } else {
-                dayCell.classList.add('partially-booked');
-            }
-        }
-        
-        dayCell.innerHTML = `
-            <span class="day-number">${day}</span>
-            <div class="booking-status-dot"></div>
-        `;
-        
-        dayCell.onclick = () => onDateSelect(cellDate);
-        daysContainer.appendChild(dayCell);
-    }
-}
-
-async function onDateSelect(date) {
-    if (!currentRoomId) return;
-    
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    if (date < today) {
-        showNotification('Нельзя выбрать прошедшую дату', 'error');
-        return;
-    }
-    
-    selectedDate = date;
-    
-    // Обновляем визуальное выделение
-    document.querySelectorAll('.calendar-day').forEach(cell => {
-        cell.classList.remove('selected');
-    });
-    event.target.closest('.calendar-day')?.classList.add('selected');
-    
-    // Загружаем доступные часы
-    await loadAvailableHours(currentRoomId, date);
-}
-
-async function loadAvailableHours(roomId, date) {
-    try {
-        const dateStr = date.toISOString().split('T')[0];
-        const response = await fetch(`${API_BASE_URL}/Room/${roomId}/available-hours?date=${dateStr}`);
-        const data = await response.json();
-        
-        if (data.success) {
-            displayTimeSlots(data.availableHours, data.bookedHours);
-        }
-    } catch (error) {
-        console.error('Error loading available hours:', error);
-    }
-}
-
-function displayTimeSlots(availableHours, bookedHours) {
-    const container = document.getElementById('timeSlotsContainer');
-    const grid = document.getElementById('timeSlotsGrid');
-    
-    if (!container || !grid) return;
-    
-    if (availableHours.length === 0) {
-        grid.innerHTML = '<p style="color: rgba(255,255,255,0.5);">Нет свободных слотов на эту дату</p>';
-        container.style.display = 'block';
-        return;
-    }
-    
-    grid.innerHTML = '';
-    availableHours.forEach(hour => {
-        const slot = document.createElement('div');
-        slot.className = 'time-slot';
-        slot.textContent = `${hour}:00 - ${hour + 1}:00`;
-        slot.onclick = () => onTimeSlotSelect(hour);
-        grid.appendChild(slot);
-    });
-    
-    container.style.display = 'block';
-}
-
-function onTimeSlotSelect(hour) {
-    // Убираем выделение с предыдущих слотов
-    document.querySelectorAll('.time-slot').forEach(slot => {
-        slot.classList.remove('selected');
-    });
-    
-    // Выделяем выбранный слот
-    event.target.classList.add('selected');
-    selectedHour = hour;
-    
-    // Автоматически заполняем форму бронирования
-    if (selectedDate && selectedHour !== null) {
-        const dateInput = document.getElementById('bookingDate');
-        const startTimeInput = document.getElementById('startTime');
-        
-        if (dateInput && startTimeInput) {
-            dateInput.value = selectedDate.toISOString().split('T')[0];
-            startTimeInput.value = `${selectedHour.toString().padStart(2, '0')}:00`;
-            
-            // Обновляем цену
-            calculatePrice();
-        }
-    }
-}
     // Настройка отображения (сетка/список)
     const gridViewBtn = document.getElementById('gridView');
     const listViewBtn = document.getElementById('listView');
@@ -383,7 +216,191 @@ function escapeHtml(str) {
         .replace(/'/g, '&#39;');
 }
 
-// Функции бронирования
+// ========== ФУНКЦИИ КАЛЕНДАРЯ ==========
+
+async function loadCalendar(roomId, year, month) {
+    currentCalendarRoomId = roomId;
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/Room/${roomId}/booked-slots?year=${year}&month=${month}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            bookedSlots = data.bookedSlots;
+            renderCalendar(year, month);
+        }
+    } catch (error) {
+        console.error('Error loading calendar:', error);
+    }
+}
+
+function renderCalendar(year, month) {
+    const firstDayOfMonth = new Date(year, month - 1, 1);
+    const lastDayOfMonth = new Date(year, month, 0);
+    let startDayOfWeek = firstDayOfMonth.getDay();
+    startDayOfWeek = startDayOfWeek === 0 ? 7 : startDayOfWeek;
+    
+    const monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+                        'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+    
+    const monthYearElement = document.getElementById('currentMonthYear');
+    if (monthYearElement) {
+        monthYearElement.textContent = `${monthNames[month - 1]} ${year}`;
+    }
+    
+    const daysContainer = document.getElementById('calendarDays');
+    if (!daysContainer) return;
+    
+    daysContainer.innerHTML = '';
+    
+    // Пустые ячейки для начала месяца
+    for (let i = 1; i < startDayOfWeek; i++) {
+        const emptyCell = document.createElement('div');
+        emptyCell.className = 'calendar-day';
+        emptyCell.style.opacity = '0';
+        daysContainer.appendChild(emptyCell);
+    }
+    
+    // Дни месяца
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    for (let day = 1; day <= lastDayOfMonth.getDate(); day++) {
+        const cellDate = new Date(year, month - 1, day);
+        const isPast = cellDate < today;
+        const dateKey = cellDate.toISOString().split('T')[0];
+        const dayBookings = bookedSlots[dateKey] || [];
+        
+        const dayCell = document.createElement('div');
+        dayCell.className = 'calendar-day';
+        
+        if (isPast) {
+            dayCell.classList.add('fully-booked');
+        } else if (dayBookings.length === 0) {
+            dayCell.classList.add('free');
+        } else {
+            const bookedHours = new Set();
+            dayBookings.forEach(booking => {
+                for (let h = booking.startHour; h < booking.endHour; h++) {
+                    bookedHours.add(h);
+                }
+            });
+            
+            const totalWorkHours = 15;
+            if (bookedHours.size >= totalWorkHours) {
+                dayCell.classList.add('fully-booked');
+            } else {
+                dayCell.classList.add('partially-booked');
+            }
+        }
+        
+        dayCell.innerHTML = `
+            <span class="day-number">${day}</span>
+            <div class="booking-status-dot"></div>
+        `;
+        
+        dayCell.onclick = (function(d) {
+            return function() { onDateSelect(d); };
+        })(cellDate);
+        
+        daysContainer.appendChild(dayCell);
+    }
+}
+
+async function onDateSelect(date) {
+    if (!currentCalendarRoomId) return;
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    if (date < today) {
+        showNotification('Нельзя выбрать прошедшую дату', 'error');
+        return;
+    }
+    
+    selectedDate = date;
+    
+    // Обновляем визуальное выделение
+    document.querySelectorAll('.calendar-day').forEach(cell => {
+        cell.classList.remove('selected');
+    });
+    
+    // Находим и выделяем выбранный день
+    const dayNumber = date.getDate();
+    const cells = document.querySelectorAll('.calendar-day .day-number');
+    for (let i = 0; i < cells.length; i++) {
+        if (parseInt(cells[i].textContent) === dayNumber) {
+            cells[i].closest('.calendar-day')?.classList.add('selected');
+            break;
+        }
+    }
+    
+    await loadAvailableHours(currentCalendarRoomId, date);
+}
+
+async function loadAvailableHours(roomId, date) {
+    try {
+        const dateStr = date.toISOString().split('T')[0];
+        const response = await fetch(`${API_BASE_URL}/Room/${roomId}/available-hours?date=${dateStr}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            displayTimeSlots(data.availableHours, data.bookedHours);
+        }
+    } catch (error) {
+        console.error('Error loading available hours:', error);
+    }
+}
+
+function displayTimeSlots(availableHours, bookedHours) {
+    const container = document.getElementById('timeSlotsContainer');
+    const grid = document.getElementById('timeSlotsGrid');
+    
+    if (!container || !grid) return;
+    
+    if (!availableHours || availableHours.length === 0) {
+        grid.innerHTML = '<p style="color: rgba(255,255,255,0.5);">Нет свободных слотов на эту дату</p>';
+        container.style.display = 'block';
+        return;
+    }
+    
+    grid.innerHTML = '';
+    availableHours.forEach(hour => {
+        const slot = document.createElement('div');
+        slot.className = 'time-slot';
+        slot.textContent = `${hour}:00 - ${hour + 1}:00`;
+        slot.onclick = (function(h) {
+            return function() { onTimeSlotSelect(h); };
+        })(hour);
+        grid.appendChild(slot);
+    });
+    
+    container.style.display = 'block';
+}
+
+function onTimeSlotSelect(hour) {
+    const slots = document.querySelectorAll('.time-slot');
+    slots.forEach(slot => {
+        slot.classList.remove('selected');
+    });
+    
+    event.target.classList.add('selected');
+    selectedHour = hour;
+    
+    if (selectedDate && selectedHour !== null) {
+        const dateInput = document.getElementById('bookingDate');
+        const startTimeInput = document.getElementById('startTime');
+        
+        if (dateInput && startTimeInput) {
+            dateInput.value = selectedDate.toISOString().split('T')[0];
+            startTimeInput.value = `${selectedHour.toString().padStart(2, '0')}:00`;
+            calculatePrice();
+        }
+    }
+}
+
+// ========== ФУНКЦИИ БРОНИРОВАНИЯ ==========
+
 function openBookingModal(roomName, maxParticipants, roomId, pricePerHour) {
     if (!isAuthenticated()) {
         showNotification('Необходимо войти в систему для бронирования', 'error');
@@ -396,7 +413,6 @@ function openBookingModal(roomName, maxParticipants, roomId, pricePerHour) {
     const modal = document.getElementById('bookingModal');
     if (!modal) return;
     
-    // Заполняем данные
     document.getElementById('roomName').value = roomName;
     document.getElementById('participants').max = maxParticipants;
     document.getElementById('participants').value = 1;
@@ -406,16 +422,15 @@ function openBookingModal(roomName, maxParticipants, roomId, pricePerHour) {
     modal.dataset.pricePerHour = pricePerHour;
     modal.dataset.maxParticipants = maxParticipants;
     
-    // Загружаем календарь для этой комнаты
+    // Загружаем календарь
     const now = new Date();
     loadCalendar(roomId, now.getFullYear(), now.getMonth() + 1);
     
-    // Сбрасываем выбранные дату и час
     selectedDate = null;
     selectedHour = null;
-    document.getElementById('timeSlotsContainer').style.display = 'none';
+    const timeContainer = document.getElementById('timeSlotsContainer');
+    if (timeContainer) timeContainer.style.display = 'none';
     
-    // Устанавливаем дату по умолчанию - завтра
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     const dateInput = document.getElementById('bookingDate');
@@ -423,7 +438,6 @@ function openBookingModal(roomName, maxParticipants, roomId, pricePerHour) {
         dateInput.valueAsDate = tomorrow;
     }
     
-    // Устанавливаем время начала по умолчанию - следующий час
     const nextHour = new Date();
     nextHour.setHours(nextHour.getHours() + 1);
     nextHour.setMinutes(0);
@@ -432,11 +446,13 @@ function openBookingModal(roomName, maxParticipants, roomId, pricePerHour) {
         timeInput.value = nextHour.toTimeString().slice(0, 5);
     }
     
-    document.getElementById('specialRequests').value = '';
-    calculatePrice();
+    const specialRequests = document.getElementById('specialRequests');
+    if (specialRequests) specialRequests.value = '';
     
+    calculatePrice();
     modal.style.display = 'flex';
 }
+
 function closeBookingModal() {
     const modal = document.getElementById('bookingModal');
     if (modal) {
@@ -455,20 +471,99 @@ function calculatePrice() {
     }
 }
 
-// Открытие модального окна оплаты
+// Обработчик формы бронирования
+async function handleBookingSubmit(e) {
+    e.preventDefault();
+    
+    const user = getCurrentUser();
+    if (!user) {
+        showNotification('Необходимо войти в систему', 'error');
+        setTimeout(() => {
+            window.location.href = 'login.html';
+        }, 1500);
+        return;
+    }
+    
+    const modal = document.getElementById('bookingModal');
+    const roomId = modal.dataset.roomId;
+    const roomName = modal.dataset.roomName;
+    const pricePerHour = parseFloat(modal.dataset.pricePerHour);
+    
+    if (!roomId) {
+        showNotification('Ошибка: комната не выбрана', 'error');
+        return;
+    }
+    
+    const date = document.getElementById('bookingDate').value;
+    const startTime = document.getElementById('startTime').value;
+    const duration = parseInt(document.getElementById('duration').value);
+    const participants = parseInt(document.getElementById('participants').value);
+    const specialRequests = document.getElementById('specialRequests')?.value || '';
+    const totalPrice = duration * pricePerHour;
+    const maxParticipants = parseInt(modal.dataset.maxParticipants);
+    
+    if (!date) {
+        showNotification('Выберите дату', 'error');
+        return;
+    }
+    
+    if (!startTime) {
+        showNotification('Выберите время начала', 'error');
+        return;
+    }
+    
+    if (participants > maxParticipants) {
+        showNotification(`Максимальное количество участников: ${maxParticipants}`, 'error');
+        return;
+    }
+    
+    const startDateTime = new Date(`${date}T${startTime}`);
+    const now = new Date();
+    
+    if (startDateTime < now) {
+        showNotification('Нельзя забронировать время в прошлом', 'error');
+        return;
+    }
+    
+    const endDateTime = new Date(startDateTime.getTime() + duration * 60 * 60 * 1000);
+    
+    const dateTimeStr = startDateTime.toLocaleString('ru-RU', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+    
+    const bookingData = {
+        roomId: roomId,
+        roomName: roomName,
+        dateTime: dateTimeStr,
+        duration: duration,
+        participants: participants,
+        specialRequests: specialRequests,
+        totalPrice: totalPrice,
+        startDateTime: startDateTime,
+        endDateTime: endDateTime,
+        pricePerHour: pricePerHour
+    };
+    
+    closeBookingModal();
+    openPaymentModal(bookingData);
+}
+
+// ========== ОСТАЛЬНЫЕ ФУНКЦИИ (ОПЛАТА, ФИЛЬТРАЦИЯ, ИЗБРАННОЕ) ==========
+
 function openPaymentModal(bookingData) {
     pendingBooking = bookingData;
     
-    // Заполняем данные
     document.getElementById('paymentRoomName').textContent = bookingData.roomName;
     document.getElementById('paymentDateTime').textContent = bookingData.dateTime;
     document.getElementById('paymentDuration').textContent = bookingData.duration + ' ' + getHoursWord(bookingData.duration);
     document.getElementById('paymentAmount').textContent = bookingData.totalPrice + ' ₽';
     
-    // Показываем модальное окно
     document.getElementById('paymentModal').style.display = 'flex';
     
-    // Обработчики переключения методов оплаты
     const cardRadio = document.querySelector('input[value="card"]');
     const sbpRadio = document.querySelector('input[value="sbp"]');
     const balanceRadio = document.querySelector('input[value="balance"]');
@@ -476,60 +571,64 @@ function openPaymentModal(bookingData) {
     const sbpForm = document.getElementById('sbpForm');
     
     const handleMethodChange = () => {
-        if (cardRadio.checked) {
-            cardForm.style.display = 'block';
-            sbpForm.style.display = 'none';
-        } else if (sbpRadio.checked) {
-            cardForm.style.display = 'none';
-            sbpForm.style.display = 'block';
+        if (cardRadio?.checked) {
+            if (cardForm) cardForm.style.display = 'block';
+            if (sbpForm) sbpForm.style.display = 'none';
+        } else if (sbpRadio?.checked) {
+            if (cardForm) cardForm.style.display = 'none';
+            if (sbpForm) sbpForm.style.display = 'block';
         } else {
-            cardForm.style.display = 'none';
-            sbpForm.style.display = 'none';
+            if (cardForm) cardForm.style.display = 'none';
+            if (sbpForm) sbpForm.style.display = 'none';
         }
     };
     
-    cardRadio.addEventListener('change', handleMethodChange);
-    sbpRadio.addEventListener('change', handleMethodChange);
-    balanceRadio.addEventListener('change', handleMethodChange);
+    if (cardRadio) cardRadio.addEventListener('change', handleMethodChange);
+    if (sbpRadio) sbpRadio.addEventListener('change', handleMethodChange);
+    if (balanceRadio) balanceRadio.addEventListener('change', handleMethodChange);
     handleMethodChange();
     
-    // Форматирование номера карты
     const cardNumber = document.getElementById('cardNumber');
-    cardNumber.addEventListener('input', function(e) {
-        let value = e.target.value.replace(/\D/g, '');
-        value = value.replace(/(\d{4})(?=\d)/g, '$1 ');
-        e.target.value = value.substring(0, 19);
-    });
+    if (cardNumber) {
+        cardNumber.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            value = value.replace(/(\d{4})(?=\d)/g, '$1 ');
+            e.target.value = value.substring(0, 19);
+        });
+    }
     
-    // Форматирование срока действия
     const cardExpiry = document.getElementById('cardExpiry');
-    cardExpiry.addEventListener('input', function(e) {
-        let value = e.target.value.replace(/\D/g, '');
-        if (value.length >= 2) {
-            value = value.substring(0, 2) + '/' + value.substring(2, 4);
-        }
-        e.target.value = value.substring(0, 5);
-    });
+    if (cardExpiry) {
+        cardExpiry.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value.length >= 2) {
+                value = value.substring(0, 2) + '/' + value.substring(2, 4);
+            }
+            e.target.value = value.substring(0, 5);
+        });
+    }
     
-    // Только цифры для CVV
     const cardCvv = document.getElementById('cardCvv');
-    cardCvv.addEventListener('input', function(e) {
-        e.target.value = e.target.value.replace(/\D/g, '').substring(0, 3);
-    });
+    if (cardCvv) {
+        cardCvv.addEventListener('input', function(e) {
+            e.target.value = e.target.value.replace(/\D/g, '').substring(0, 3);
+        });
+    }
     
-    // Форматирование телефона
     const phoneNumber = document.getElementById('phoneNumber');
-    phoneNumber.addEventListener('input', function(e) {
-        let value = e.target.value.replace(/\D/g, '');
-        if (value.length > 0) {
-            let formatted = '+7';
-            if (value.length > 1) formatted += ' (' + value.substring(1, 4);
-            if (value.length >= 4) formatted += ') ' + value.substring(4, 7);
-            if (value.length >= 7) formatted += '-' + value.substring(7, 9);
-            if (value.length >= 9) formatted += '-' + value.substring(9, 11);
-            e.target.value = formatted;
-        }
-    });
+    if (phoneNumber) {
+        phoneNumber.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value.length > 0) {
+                let formatted = '+7';
+                if (value.length > 1) formatted += ' (' + value.substring(1, 4);
+                if (value.length >= 4) formatted += ') ' + value.substring(4, 7);
+                if (value.length >= 7) formatted += '-' + value.substring(7, 9);
+                if (value.length >= 9) formatted += '-' + value.substring(9, 11);
+                e.target.value = formatted;
+            }
+        });
+    }
 }
 
 function closePaymentModal() {
@@ -537,66 +636,58 @@ function closePaymentModal() {
     pendingBooking = null;
 }
 
-// Имитация обработки платежа
 async function processPayment() {
-    const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked').value;
+    const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked')?.value;
     
-    // Валидация в зависимости от метода оплаты
     if (paymentMethod === 'card') {
-        const cardNumber = document.getElementById('cardNumber').value.replace(/\s/g, '');
-        const cardExpiry = document.getElementById('cardExpiry').value;
-        const cardCvv = document.getElementById('cardCvv').value;
+        const cardNumber = document.getElementById('cardNumber')?.value.replace(/\s/g, '');
+        const cardExpiry = document.getElementById('cardExpiry')?.value;
+        const cardCvv = document.getElementById('cardCvv')?.value;
         
-        if (cardNumber.length !== 16) {
+        if (cardNumber?.length !== 16) {
             showNotification('Введите корректный номер карты (16 цифр)', 'error');
             return;
         }
-        if (!cardExpiry.match(/^\d{2}\/\d{2}$/)) {
+        if (!cardExpiry?.match(/^\d{2}\/\d{2}$/)) {
             showNotification('Введите корректный срок действия (MM/YY)', 'error');
             return;
         }
-        if (cardCvv.length !== 3) {
+        if (cardCvv?.length !== 3) {
             showNotification('Введите корректный CVV код (3 цифры)', 'error');
             return;
         }
     }
     
     if (paymentMethod === 'sbp') {
-        const phone = document.getElementById('phoneNumber').value;
-        if (!phone.match(/^\+7 \(\d{3}\) \d{3}-\d{2}-\d{2}$/)) {
+        const phone = document.getElementById('phoneNumber')?.value;
+        if (!phone?.match(/^\+7 \(\d{3}\) \d{3}-\d{2}-\d{2}$/)) {
             showNotification('Введите корректный номер телефона', 'error');
             return;
         }
     }
     
-    // Показываем лоадер
     const payButton = document.getElementById('payButton');
     const paymentLoader = document.getElementById('paymentLoader');
     const paymentDetails = document.getElementById('paymentDetails');
     
-    payButton.style.display = 'none';
-    paymentDetails.style.display = 'none';
-    paymentLoader.style.display = 'block';
+    if (payButton) payButton.style.display = 'none';
+    if (paymentDetails) paymentDetails.style.display = 'none';
+    if (paymentLoader) paymentLoader.style.display = 'block';
     
-    // Имитация задержки обработки платежа (1-2 секунды)
     await new Promise(resolve => setTimeout(resolve, 1500));
     
-    // Имитация успешной оплаты (95% успеха)
     const isSuccess = Math.random() < 0.95;
     
     if (isSuccess) {
-        // Успешная оплата - отправляем бронирование на сервер
         await completeBooking();
     } else {
-        // Ошибка оплаты
-        paymentLoader.style.display = 'none';
-        paymentDetails.style.display = 'block';
-        payButton.style.display = 'block';
+        if (paymentLoader) paymentLoader.style.display = 'none';
+        if (paymentDetails) paymentDetails.style.display = 'block';
+        if (payButton) payButton.style.display = 'block';
         showNotification('Ошибка оплаты. Попробуйте другую карту.', 'error');
     }
 }
 
-// Завершение бронирования после успешной оплаты
 async function completeBooking() {
     if (!pendingBooking) {
         showNotification('Ошибка: данные бронирования не найдены', 'error');
@@ -633,15 +724,15 @@ async function completeBooking() {
         const data = await response.json();
         
         if (response.ok && data.success) {
-            // Скрываем лоадер и показываем успех
             const paymentLoader = document.getElementById('paymentLoader');
-            paymentLoader.innerHTML = `
-                <i class="fa-solid fa-check-circle" style="font-size: 48px; color: #10b981; margin-bottom: 15px;"></i>
-                <p style="color: #10b981;">Оплата прошла успешно!</p>
-                <p style="color: rgba(255,255,255,0.7); font-size: 14px;">Перенаправление...</p>
-            `;
+            if (paymentLoader) {
+                paymentLoader.innerHTML = `
+                    <i class="fa-solid fa-check-circle" style="font-size: 48px; color: #10b981; margin-bottom: 15px;"></i>
+                    <p style="color: #10b981;">Оплата прошла успешно!</p>
+                    <p style="color: rgba(255,255,255,0.7); font-size: 14px;">Перенаправление...</p>
+                `;
+            }
             
-            // Сохраняем в историю платежей (localStorage)
             savePaymentToHistory({
                 id: data.booking_id,
                 roomName: pendingBooking.roomName,
@@ -667,11 +758,13 @@ async function completeBooking() {
         console.error('Booking error:', error);
         
         const paymentLoader = document.getElementById('paymentLoader');
-        paymentLoader.innerHTML = `
-            <i class="fa-solid fa-exclamation-circle" style="font-size: 48px; color: #ef4444; margin-bottom: 15px;"></i>
-            <p style="color: #ef4444;">Ошибка бронирования!</p>
-            <p style="color: rgba(255,255,255,0.7); font-size: 14px;">${error.message}</p>
-        `;
+        if (paymentLoader) {
+            paymentLoader.innerHTML = `
+                <i class="fa-solid fa-exclamation-circle" style="font-size: 48px; color: #ef4444; margin-bottom: 15px;"></i>
+                <p style="color: #ef4444;">Ошибка бронирования!</p>
+                <p style="color: rgba(255,255,255,0.7); font-size: 14px;">${error.message}</p>
+            `;
+        }
         
         setTimeout(() => {
             closePaymentModal();
@@ -680,7 +773,6 @@ async function completeBooking() {
     }
 }
 
-// Сохранение истории платежей
 function savePaymentToHistory(payment) {
     let history = JSON.parse(localStorage.getItem('paymentHistory') || '[]');
     history.unshift(payment);
@@ -688,113 +780,23 @@ function savePaymentToHistory(payment) {
     localStorage.setItem('paymentHistory', JSON.stringify(history));
 }
 
-// Вспомогательная функция для склонения часов
 function getHoursWord(hours) {
     if (hours === 1) return 'час';
     if (hours >= 2 && hours <= 4) return 'часа';
     return 'часов';
 }
 
-// Обработчик формы бронирования - собирает данные и открывает окно оплаты
-async function handleBookingSubmit(e) {
-    e.preventDefault();
-    
-    const user = getCurrentUser();
-    if (!user) {
-        showNotification('Необходимо войти в систему', 'error');
-        setTimeout(() => {
-            window.location.href = 'login.html';
-        }, 1500);
-        return;
-    }
-    
-    const modal = document.getElementById('bookingModal');
-    const roomId = modal.dataset.roomId;
-    const roomName = modal.dataset.roomName;
-    const pricePerHour = parseFloat(modal.dataset.pricePerHour);
-    
-    if (!roomId) {
-        showNotification('Ошибка: комната не выбрана', 'error');
-        return;
-    }
-    
-    const date = document.getElementById('bookingDate').value;
-    const startTime = document.getElementById('startTime').value;
-    const duration = parseInt(document.getElementById('duration').value);
-    const participants = parseInt(document.getElementById('participants').value);
-    const specialRequests = document.getElementById('specialRequests')?.value || '';
-    const totalPrice = duration * pricePerHour;
-    const maxParticipants = parseInt(modal.dataset.maxParticipants);
-    
-    // Валидация
-    if (!date) {
-        showNotification('Выберите дату', 'error');
-        return;
-    }
-    
-    if (!startTime) {
-        showNotification('Выберите время начала', 'error');
-        return;
-    }
-    
-    if (participants > maxParticipants) {
-        showNotification(`Максимальное количество участников: ${maxParticipants}`, 'error');
-        return;
-    }
-    
-    // Формируем дату и время
-    const startDateTime = new Date(`${date}T${startTime}`);
-    const now = new Date();
-    
-    if (startDateTime < now) {
-        showNotification('Нельзя забронировать время в прошлом', 'error');
-        return;
-    }
-    
-    const endDateTime = new Date(startDateTime.getTime() + duration * 60 * 60 * 1000);
-    
-    // Форматируем дату для отображения
-    const dateTimeStr = startDateTime.toLocaleString('ru-RU', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    });
-    
-    // Сохраняем данные бронирования для оплаты
-    const bookingData = {
-        roomId: roomId,
-        roomName: roomName,
-        dateTime: dateTimeStr,
-        duration: duration,
-        participants: participants,
-        specialRequests: specialRequests,
-        totalPrice: totalPrice,
-        startDateTime: startDateTime,
-        endDateTime: endDateTime,
-        pricePerHour: pricePerHour
-    };
-    
-    // Закрываем модальное окно бронирования
-    closeBookingModal();
-    
-    // Открываем модальное окно оплаты
-    openPaymentModal(bookingData);
-}
+// ========== ФИЛЬТРАЦИЯ ==========
 
-// Фильтрация комнат
 function filterRooms() {
     let filteredRooms = [...allRooms];
     
-    // Фильтр по цене
     const priceRange = document.getElementById('priceRange');
     if (priceRange) {
         const maxPrice = parseInt(priceRange.value);
         filteredRooms = filteredRooms.filter(room => room.price_per_hour <= maxPrice);
     }
     
-    // Фильтр по вместимости
     const activeCapacity = document.querySelector('.capacity-option.active');
     if (activeCapacity) {
         const capacityText = activeCapacity.textContent;
@@ -807,7 +809,6 @@ function filterRooms() {
         }
     }
     
-    // Поиск по названию и описанию
     const searchInput = document.querySelector('.search-box input');
     if (searchInput && searchInput.value) {
         const searchTerm = searchInput.value.toLowerCase();
@@ -863,7 +864,8 @@ function getDeclension(number, one, two, five) {
     return five;
 }
 
-// Избранное
+// ========== ИЗБРАННОЕ ==========
+
 function toggleFavorite(roomId) {
     const button = event.currentTarget;
     const icon = button.querySelector('i');
@@ -914,7 +916,8 @@ function loadFavorites() {
     });
 }
 
-// Уведомления
+// ========== УВЕДОМЛЕНИЯ ==========
+
 function showNotification(message, type = 'info') {
     const existing = document.querySelector('.notification');
     if (existing) existing.remove();
