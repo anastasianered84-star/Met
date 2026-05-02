@@ -36,7 +36,180 @@ document.addEventListener('DOMContentLoaded', async function() {
             filterRooms();
         });
     }
+    let currentDate = new Date();
+let currentRoomId = null;
+let bookedSlots = {};
+let selectedDate = null;
+let selectedHour = null;
+
+// Функции календаря
+async function loadCalendar(roomId, year, month) {
+    currentRoomId = roomId;
     
+    try {
+        const response = await fetch(`${API_BASE_URL}/Room/${roomId}/booked-slots?year=${year}&month=${month}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            bookedSlots = data.bookedSlots;
+            renderCalendar(year, month);
+        }
+    } catch (error) {
+        console.error('Error loading calendar:', error);
+    }
+}
+
+function renderCalendar(year, month) {
+    const firstDayOfMonth = new Date(year, month - 1, 1);
+    const lastDayOfMonth = new Date(year, month, 0);
+    const startDayOfWeek = firstDayOfMonth.getDay() || 7; // Понедельник = 1
+    
+    const monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+                        'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+    document.getElementById('currentMonthYear').textContent = `${monthNames[month - 1]} ${year}`;
+    
+    const daysContainer = document.getElementById('calendarDays');
+    daysContainer.innerHTML = '';
+    
+    // Пустые ячейки для начала месяца
+    for (let i = 1; i < startDayOfWeek; i++) {
+        const emptyCell = document.createElement('div');
+        emptyCell.className = 'calendar-day';
+        emptyCell.style.opacity = '0';
+        daysContainer.appendChild(emptyCell);
+    }
+    
+    // Дни месяца
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    for (let day = 1; day <= lastDayOfMonth.getDate(); day++) {
+        const cellDate = new Date(year, month - 1, day);
+        const isPast = cellDate < today;
+        const dateKey = cellDate.toISOString().split('T')[0];
+        const dayBookings = bookedSlots[dateKey] || [];
+        
+        const dayCell = document.createElement('div');
+        dayCell.className = 'calendar-day';
+        
+        // Определяем статус дня
+        if (isPast) {
+            dayCell.classList.add('fully-booked');
+        } else if (dayBookings.length === 0) {
+            dayCell.classList.add('free');
+        } else {
+            // Проверяем, полностью ли занят день
+            const bookedHours = new Set();
+            dayBookings.forEach(booking => {
+                for (let h = booking.startHour; h < booking.endHour; h++) {
+                    bookedHours.add(h);
+                }
+            });
+            
+            // Рабочие часы 8-23
+            const totalWorkHours = 15;
+            if (bookedHours.size >= totalWorkHours) {
+                dayCell.classList.add('fully-booked');
+            } else {
+                dayCell.classList.add('partially-booked');
+            }
+        }
+        
+        dayCell.innerHTML = `
+            <span class="day-number">${day}</span>
+            <div class="booking-status-dot"></div>
+        `;
+        
+        dayCell.onclick = () => onDateSelect(cellDate);
+        daysContainer.appendChild(dayCell);
+    }
+}
+
+async function onDateSelect(date) {
+    if (!currentRoomId) return;
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    if (date < today) {
+        showNotification('Нельзя выбрать прошедшую дату', 'error');
+        return;
+    }
+    
+    selectedDate = date;
+    
+    // Обновляем визуальное выделение
+    document.querySelectorAll('.calendar-day').forEach(cell => {
+        cell.classList.remove('selected');
+    });
+    event.target.closest('.calendar-day')?.classList.add('selected');
+    
+    // Загружаем доступные часы
+    await loadAvailableHours(currentRoomId, date);
+}
+
+async function loadAvailableHours(roomId, date) {
+    try {
+        const dateStr = date.toISOString().split('T')[0];
+        const response = await fetch(`${API_BASE_URL}/Room/${roomId}/available-hours?date=${dateStr}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            displayTimeSlots(data.availableHours, data.bookedHours);
+        }
+    } catch (error) {
+        console.error('Error loading available hours:', error);
+    }
+}
+
+function displayTimeSlots(availableHours, bookedHours) {
+    const container = document.getElementById('timeSlotsContainer');
+    const grid = document.getElementById('timeSlotsGrid');
+    
+    if (!container || !grid) return;
+    
+    if (availableHours.length === 0) {
+        grid.innerHTML = '<p style="color: rgba(255,255,255,0.5);">Нет свободных слотов на эту дату</p>';
+        container.style.display = 'block';
+        return;
+    }
+    
+    grid.innerHTML = '';
+    availableHours.forEach(hour => {
+        const slot = document.createElement('div');
+        slot.className = 'time-slot';
+        slot.textContent = `${hour}:00 - ${hour + 1}:00`;
+        slot.onclick = () => onTimeSlotSelect(hour);
+        grid.appendChild(slot);
+    });
+    
+    container.style.display = 'block';
+}
+
+function onTimeSlotSelect(hour) {
+    // Убираем выделение с предыдущих слотов
+    document.querySelectorAll('.time-slot').forEach(slot => {
+        slot.classList.remove('selected');
+    });
+    
+    // Выделяем выбранный слот
+    event.target.classList.add('selected');
+    selectedHour = hour;
+    
+    // Автоматически заполняем форму бронирования
+    if (selectedDate && selectedHour !== null) {
+        const dateInput = document.getElementById('bookingDate');
+        const startTimeInput = document.getElementById('startTime');
+        
+        if (dateInput && startTimeInput) {
+            dateInput.value = selectedDate.toISOString().split('T')[0];
+            startTimeInput.value = `${selectedHour.toString().padStart(2, '0')}:00`;
+            
+            // Обновляем цену
+            calculatePrice();
+        }
+    }
+}
     // Настройка отображения (сетка/список)
     const gridViewBtn = document.getElementById('gridView');
     const listViewBtn = document.getElementById('listView');
@@ -212,7 +385,6 @@ function escapeHtml(str) {
 
 // Функции бронирования
 function openBookingModal(roomName, maxParticipants, roomId, pricePerHour) {
-    // Проверка авторизации
     if (!isAuthenticated()) {
         showNotification('Необходимо войти в систему для бронирования', 'error');
         setTimeout(() => {
@@ -229,11 +401,19 @@ function openBookingModal(roomName, maxParticipants, roomId, pricePerHour) {
     document.getElementById('participants').max = maxParticipants;
     document.getElementById('participants').value = 1;
     
-    // Сохраняем данные комнаты в dataset
     modal.dataset.roomId = roomId;
     modal.dataset.roomName = roomName;
     modal.dataset.pricePerHour = pricePerHour;
     modal.dataset.maxParticipants = maxParticipants;
+    
+    // Загружаем календарь для этой комнаты
+    const now = new Date();
+    loadCalendar(roomId, now.getFullYear(), now.getMonth() + 1);
+    
+    // Сбрасываем выбранные дату и час
+    selectedDate = null;
+    selectedHour = null;
+    document.getElementById('timeSlotsContainer').style.display = 'none';
     
     // Устанавливаем дату по умолчанию - завтра
     const tomorrow = new Date();
@@ -252,19 +432,11 @@ function openBookingModal(roomName, maxParticipants, roomId, pricePerHour) {
         timeInput.value = nextHour.toTimeString().slice(0, 5);
     }
     
-    // Сбрасываем особые пожелания
-    const specialRequests = document.getElementById('specialRequests');
-    if (specialRequests) {
-        specialRequests.value = '';
-    }
-    
-    // Пересчитываем цену
+    document.getElementById('specialRequests').value = '';
     calculatePrice();
     
-    // Показываем модальное окно
     modal.style.display = 'flex';
 }
-
 function closeBookingModal() {
     const modal = document.getElementById('bookingModal');
     if (modal) {
