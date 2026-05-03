@@ -128,7 +128,40 @@ function loadFavorites() {
         }
     });
 }
-
+async function processPayment(bookingId, amount, roomName) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/Payment/create`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+            },
+            body: JSON.stringify({
+                bookingId: bookingId,
+                amount: amount,
+                roomName: roomName
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success && data.paymentUrl) {
+            // Открываем оплату в новом окне
+            window.open(data.paymentUrl, '_blank');
+            
+            // Показываем сообщение
+            alert('✅ Бронирование создано! Оплатите в открывшемся окне.\nПосле оплаты вернитесь в личный кабинет.');
+            
+            // Переходим в список бронирований
+            window.location.href = 'booking.html';
+        } else {
+            alert('❌ Ошибка: ' + (data.message || 'Не удалось создать платёж'));
+        }
+    } catch (error) {
+        console.error('Payment error:', error);
+        alert('❌ Ошибка при создании платежа');
+    }
+}
 function updateResultsCount(count) {
     const el = document.querySelector('.results-count');
     if (el) el.textContent = `Найдено: ${count} комнат`;

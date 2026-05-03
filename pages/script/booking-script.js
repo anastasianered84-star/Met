@@ -1,6 +1,32 @@
 const API_BASE_URL = 'https://metabook-production.up.railway.app/api';
 const API_HOST = 'https://metabook-production.up.railway.app';
 
+// ========== ГЛАВНОЕ ИСПРАВЛЕНИЕ ==========
+// Функция парсит дату из БД как ЛОКАЛЬНОЕ время (игнорирует UTC/Z)
+function parseLocalTimeFromDB(dateString) {
+    if (!dateString) return new Date();
+    // Бэкенд теперь отдаёт UTC с Z — браузер сам конвертирует в локальное время
+    return new Date(dateString);
+
+    // Убираем Z, если он есть
+    let cleaned = dateString.replace('Z', '');
+
+    // Формат: "2026-05-03T19:00:00"
+    const [datePart, timePart] = cleaned.split('T');
+    const [year, month, day] = datePart.split('-');
+    const [hour, minute] = timePart.split(':');
+
+    // Создаём дату в ЛОКАЛЬНОМ часовом поясе (без преобразований UTC)
+    return new Date(
+        parseInt(year),
+        parseInt(month) - 1,
+        parseInt(day),
+        parseInt(hour),
+        parseInt(minute)
+    );
+}
+// =======================================
+
 // Кэш для названий комнат
 let roomsCache = {};
 
@@ -9,7 +35,7 @@ async function loadRoomsCache() {
     try {
         const response = await fetch(`${API_BASE_URL}/Room/list`);
         const data = await response.json();
-        
+
         if (data.success && data.rooms) {
             roomsCache = {};
             data.rooms.forEach(room => {
@@ -34,10 +60,9 @@ document.addEventListener('DOMContentLoaded', async function () {
         return;
     }
 
-    // Загружаем кэш комнат перед загрузкой бронирований
     await loadRoomsCache();
     await loadUserBookings();
-    
+
     const tabButtons = document.querySelectorAll('.tab-btn');
     const tabContents = document.querySelectorAll('.tab-content');
 
@@ -59,7 +84,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     });
 
     showTab('active');
-    
+
     const searchInput = document.createElement('input');
     searchInput.type = 'text';
     searchInput.placeholder = 'Поиск бронирований...';
@@ -91,14 +116,12 @@ async function loadUserBookings() {
     const userId = localStorage.getItem('userId');
 
     try {
-        // Пробуем получить бронирования через эндпоинт пользователя
         let response = await fetch(`${API_BASE_URL}/User/bookings`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
 
         let data = await response.json();
 
-        // Если нет эндпоинта /User/bookings, пробуем через Booking контроллер
         if (!data.success && userId) {
             response = await fetch(`${API_BASE_URL}/Booking/user/${userId}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
@@ -152,9 +175,8 @@ function displayBookings(bookings) {
         cancelled: document.getElementById('cancelled-tab')
     };
 
-    // Очищаем все вкладки
-    Object.values(tabs).forEach(tab => { 
-        if (tab) tab.innerHTML = ''; 
+    Object.values(tabs).forEach(tab => {
+        if (tab) tab.innerHTML = '';
     });
 
     if (!bookings || bookings.length === 0) {
@@ -171,7 +193,6 @@ function displayBookings(bookings) {
         }
     });
 
-    // Проверка пустых вкладок
     Object.entries(tabs).forEach(([status, tab]) => {
         if (!tab) return;
         if (!tab.querySelector('.booking-card')) {
@@ -189,17 +210,17 @@ function createBookingCard(booking, status) {
     const card = document.createElement('div');
     card.className = `booking-card ${status}`;
 
-    const startTime = new Date(booking.start_time);
-    const endTime = new Date(booking.end_time);
+    // ========== ИСПРАВЛЕНИЕ: парсим как ЛОКАЛЬНОЕ время ==========
+    const startTime = parseLocalTimeFromDB(booking.start_time);
+    const endTime = parseLocalTimeFromDB(booking.end_time);
+    // ============================================================
+
     const duration = Math.round((endTime - startTime) / (1000 * 60 * 60));
-    
-    // Получаем название комнаты из кэша
+
     const roomName = getRoomName(booking.room_id);
-    
-    // Проверяем, активна ли комната сейчас (для активных бронирований)
+
     const now = new Date();
     const isCurrentlyActive = status === 'active' && startTime <= now && endTime > now;
-    const isUpcoming = status === 'upcoming' && startTime > now;
 
     const statusLabels = {
         active: isCurrentlyActive ? 'Активно' : 'Предстоит',
@@ -232,15 +253,20 @@ function createBookingCard(booking, status) {
         }
     }
 
-    // Отображаем дату в читаемом формате
     const startDateStr = startTime.toLocaleDateString('ru-RU', {
         day: 'numeric',
         month: 'long',
         year: 'numeric'
     });
-    
+
     const startTimeStr = startTime.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
     const endTimeStr = endTime.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+
+    // Отладка (после исправления время будет правильным)
+    console.log(`=== Бронирование #${booking.id} ===`);
+    console.log('Raw start_time:', booking.start_time);
+    console.log('Parsed startTime:', startTime.toString());
+    console.log('Display time:', startTimeStr);
 
     card.innerHTML = `
         <div class="booking-header">
@@ -299,7 +325,6 @@ function getBookingActions(booking, status, isCurrentlyActive = false) {
                     </button>
                 `;
             } else {
-                // Бронирование еще не началось, но статус active (по факту upcoming)
                 return `
                     <button class="btn btn-outline" onclick="cancelBooking(${booking.id})">
                         <i class="fa-solid fa-times"></i> Отменить
@@ -332,14 +357,15 @@ function getBookingActions(booking, status, isCurrentlyActive = false) {
 
 function updateStatistics(bookings) {
     const stats = { active: 0, upcoming: 0, completed: 0, cancelled: 0 };
-    
+
     const now = new Date();
 
     bookings.forEach(b => {
-        const startTime = new Date(b.start_time);
-        const endTime = new Date(b.end_time);
-        
-        // Пересчитываем статус на основе времени
+        // ========== ИСПРАВЛЕНИЕ: парсим как ЛОКАЛЬНОЕ время ==========
+        const startTime = parseLocalTimeFromDB(b.start_time);
+        const endTime = parseLocalTimeFromDB(b.end_time);
+        // ============================================================
+
         if (b.status === 'cancelled') {
             stats.cancelled++;
         } else if (endTime < now) {
@@ -349,7 +375,6 @@ function updateStatistics(bookings) {
         } else if (startTime > now) {
             stats.upcoming++;
         } else {
-            // Fallback
             if (stats[b.status] !== undefined) stats[b.status]++;
         }
     });
@@ -363,7 +388,6 @@ function updateStatistics(bookings) {
     }
 }
 
-// Действия с бронированием
 async function cancelBooking(bookingId) {
     if (!confirm('Вы уверены, что хотите отменить бронирование?')) return;
 
@@ -390,13 +414,11 @@ async function cancelBooking(bookingId) {
 }
 
 function editBooking(bookingId, roomId) {
-    // Перенаправляем на страницу с формой изменения бронирования
     window.location.href = `edit-booking.html?id=${bookingId}&room=${roomId}`;
 }
 
 function viewBookingDetails(bookingId) {
     showNotification('Информация о бронировании #' + bookingId, 'info');
-    // Можно открыть модальное окно с деталями
 }
 
 function bookAgain(roomId) {
@@ -430,12 +452,12 @@ function showNotification(message, type = 'info') {
         cursor: pointer;
     `;
     document.body.appendChild(notification);
-    
+
     notification.onclick = () => {
         notification.style.animation = 'slideOut 0.3s ease';
         setTimeout(() => notification.remove(), 300);
     };
-    
+
     setTimeout(() => {
         if (notification.parentElement) {
             notification.style.animation = 'slideOut 0.3s ease';

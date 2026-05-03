@@ -10,7 +10,6 @@ let currentMonth = new Date().getMonth() + 1;
 let bookedSlots = {};
 let selectedDate = null;
 let selectedHour = null;
-let pendingBooking = null;
 
 const urlParams = new URLSearchParams(window.location.search);
 const roomIdFromUrl = urlParams.get('id');
@@ -75,7 +74,8 @@ async function loadRoomInfo(roomId) {
 
 async function loadCalendar(roomId, year, month) {
     try {
-        const response = await fetch(`${API_BASE_URL}/Room/${roomId}/booked-slots?year=${year}&month=${month}`);
+        const tzOffset = new Date().getTimezoneOffset();
+        const response = await fetch(`${API_BASE_URL}/Room/${roomId}/booked-slots?year=${year}&month=${month}&tzOffset=${tzOffset}`);
         const data = await response.json();
         if (data.success) {
             bookedSlots = data.bookedSlots;
@@ -122,14 +122,12 @@ function renderCalendar(year, month) {
         } else if (dayBookings.length === 0) {
             dayCell.classList.add('free');
         } else {
-            // Проверяем, полностью ли занят день (24 часа)
             const bookedHours = new Set();
             dayBookings.forEach(b => {
                 for (let h = b.startHour; h < b.endHour; h++) {
                     bookedHours.add(h);
                 }
             });
-            // Всего 24 часа в сутках
             if (bookedHours.size >= 24) {
                 dayCell.classList.add('booked');
             } else {
@@ -157,11 +155,18 @@ async function onDateSelect(date) {
 
 async function loadAvailableHours(roomId, date) {
     try {
-        const dateStr = date.toISOString().split('T')[0];
-        const response = await fetch(`${API_BASE_URL}/Room/${roomId}/available-hours?date=${dateStr}`);
+        const year = date.getFullYear();
+        const month = date.getMonth() + 1;
+        const day = date.getDate();
+        const dateStr = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+        
+        // Смещение в минутах (отрицательное для UTC+), передаём на бэкенд
+        const tzOffset = new Date().getTimezoneOffset(); // для UTC+5 = -300
+        
+        const response = await fetch(`${API_BASE_URL}/Room/${roomId}/available-hours?date=${dateStr}&tzOffset=${tzOffset}`);
         const data = await response.json();
+        
         if (data.success) {
-            // Передаем оба массива: свободные часы И занятые часы
             displayTimeSlots(data.availableHours, data.bookedHours);
         }
     } catch (error) {
@@ -173,15 +178,12 @@ function displayTimeSlots(availableHours, bookedHours) {
     const container = document.getElementById('timeSlotsGrid');
     if (!container) return;
     
-    // Создаем массив всех часов от 0 до 23 (круглосуточно)
     const allHours = [];
     for (let hour = 0; hour < 24; hour++) {
         allHours.push(hour);
     }
     
-    // Создаем Set занятых часов для быстрой проверки
     const bookedSet = new Set(bookedHours || []);
-    const availableSet = new Set(availableHours || []);
     
     container.innerHTML = '';
     
@@ -189,18 +191,21 @@ function displayTimeSlots(availableHours, bookedHours) {
         const slot = document.createElement('div');
         slot.className = 'time-slot';
         
-        // Форматируем время
         const startTimeStr = `${hour.toString().padStart(2, '0')}:00`;
         const endTimeStr = `${(hour + 1).toString().padStart(2, '0')}:00`;
         slot.textContent = `${startTimeStr} - ${endTimeStr}`;
         
-        // Проверяем, занят ли этот час
         if (bookedSet.has(hour)) {
             slot.classList.add('booked-time');
             slot.title = 'Это время уже занято';
+            slot.style.background = 'rgba(239, 68, 68, 0.3)';
+            slot.style.borderColor = '#ef4444';
+            slot.style.cursor = 'not-allowed';
             slot.onclick = null;
         } else {
             slot.classList.add('available');
+            slot.style.background = 'rgba(16, 185, 129, 0.2)';
+            slot.style.cursor = 'pointer';
             slot.onclick = () => onTimeSlotSelect(hour, slot);
         }
         
@@ -250,22 +255,42 @@ async function handleBookingSubmit(e) {
         return;
     }
     
-    const startDateTime = new Date(`${date}T${startTime}`);
-    const now = new Date();
-    
-    if (startDateTime < now) {
-        showNotification('Нельзя забронировать время в прошлом', 'error');
-        return;
-    }
-    
-    const endDateTime = new Date(startDateTime.getTime() + duration * 60 * 60 * 1000);
-    
-    const formData = new FormData();
-    formData.append('roomId', currentRoomId);
-    formData.append('userId', userId);
-    formData.append('startTime', startDateTime.toISOString());
-    formData.append('endTime', endDateTime.toISOString());
-    formData.append('specialRequests', specialRequests);
+    const [year, month, day] = date.split('-');
+const [hour] = startTime.split(':');
+
+// Создаём дату в ЛОКАЛЬНОМ часовом поясе браузера
+const localStartDateTime = new Date(
+    parseInt(year),
+    parseInt(month) - 1,
+    parseInt(day),
+    parseInt(hour),
+    0,
+    0
+);
+
+// Проверка: нельзя бронировать в прошлом
+const now = new Date();
+if (localStartDateTime < now) {
+    showNotification('Нельзя забронировать время в прошлом', 'error');
+    return;
+}
+
+// Конец бронирования (от локального времени + duration часов)
+const localEndDateTime = new Date(localStartDateTime.getTime() + duration * 60 * 60 * 1000);
+
+// toISOString() автоматически конвертирует локальное время в UTC
+const startISO = localStartDateTime.toISOString();
+const endISO = localEndDateTime.toISOString();
+
+console.log('Локальное начало:', localStartDateTime.toLocaleString('ru-RU'));
+console.log('UTC для отправки:', startISO);
+
+const formData = new FormData();
+formData.append('roomId', currentRoomId);
+formData.append('userId', userId);
+formData.append('startTime', startISO);
+formData.append('endTime', endISO);
+formData.append('specialRequests', specialRequests);
     
     try {
         const response = await fetch(`${API_BASE_URL}/Room/book`, {
@@ -276,11 +301,12 @@ async function handleBookingSubmit(e) {
         const data = await response.json();
         
         if (data.success) {
-            showNotification('✅ Бронирование успешно создано!', 'success');
-            setTimeout(() => {
-                window.location.href = 'booking.html';
-            }, 1500);
-        } else {
+    // Рассчитываем общую стоимость
+    const totalPrice = duration * currentRoomPrice;
+    
+    // Вызываем оплату
+    await processPayment(data.booking_id, totalPrice, currentRoomName);
+} else {
             showNotification('❌ Ошибка: ' + data.message, 'error');
         }
     } catch (error) {
@@ -288,7 +314,44 @@ async function handleBookingSubmit(e) {
         showNotification('❌ Ошибка при бронировании', 'error');
     }
 }
-
+async function processPayment(bookingId, amount, roomName) {
+    try {
+        const token = localStorage.getItem('authToken');
+        
+        const response = await fetch(`${API_BASE_URL}/Payment/create`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                bookingId: bookingId,
+                amount: amount,
+                roomName: roomName
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success && data.paymentUrl) {
+            // Открываем оплату в новом окне
+            window.open(data.paymentUrl, '_blank');
+            
+            // Показываем сообщение
+            showNotification('✅ Бронирование создано! Оплатите в открывшемся окне.', 'success');
+            
+            // Переходим в список бронирований через 2 секунды
+            setTimeout(() => {
+                window.location.href = 'booking.html';
+            }, 2000);
+        } else {
+            showNotification('❌ Ошибка: ' + (data.message || 'Не удалось создать платёж'), 'error');
+        }
+    } catch (error) {
+        console.error('Payment error:', error);
+        showNotification('❌ Ошибка при создании платежа', 'error');
+    }
+}
 function showNotification(message, type) {
     const notification = document.createElement('div');
     const colors = { success: '#10b981', error: '#ef4444', info: '#3b82f6' };
@@ -296,6 +359,7 @@ function showNotification(message, type) {
         position: fixed; top: 80px; right: 20px; padding: 12px 20px;
         background: ${colors[type] || colors.info}; color: white;
         border-radius: 8px; z-index: 10000; animation: fadeIn 0.3s ease;
+        cursor: pointer;
     `;
     notification.innerHTML = message;
     document.body.appendChild(notification);
