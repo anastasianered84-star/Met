@@ -2,10 +2,9 @@ const API_BASE_URL = 'https://metabook-production.up.railway.app/api';
 const API_HOST = 'https://metabook-production.up.railway.app';
 
 let currentRoomId = null;
-let lastChatMessageId = 0;
-let pollingInterval = null;
 let currentUserId = null;
 let isRoomOwner = false;
+let connection = null;
 
 document.addEventListener('DOMContentLoaded', async function () {
     const token = localStorage.getItem('authToken');
@@ -39,18 +38,12 @@ document.addEventListener('DOMContentLoaded', async function () {
         return;
     }
 
-    // НЕ НУЖНО вызывать joinRoom - пользователь уже добавлен при бронировании
-    // Просто загружаем информацию о комнате
-
-    // Загрузить начальное состояние
+    // Загружаем информацию о комнате
     await refreshRoomInfo();
     await loadChatHistory();
 
-    // Запустить polling каждые 5 секунд
-    pollingInterval = setInterval(async () => {
-        await refreshRoomInfo();
-        await pollNewMessages();
-    }, 5000);
+    // ========== ПОДКЛЮЧАЕМ SIGNALR ДЛЯ ЧАТА ==========
+    await initSignalR();
 
     // Отправка сообщения по Enter
     const messageInput = document.getElementById('messageInput');
@@ -69,33 +62,57 @@ document.addEventListener('DOMContentLoaded', async function () {
         el.style.display = 'none';
     });
     
-    // Обработчик закрытия модального окна
     window.onclick = function(event) {
         const modal = document.getElementById('inviteModal');
         if (event.target === modal) {
             closeModal('inviteModal');
         }
     };
+
     const inviteEmailInput = document.getElementById('inviteEmail');
-if (inviteEmailInput) {
-    inviteEmailInput.addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            inviteUserByEmail();
-        }
-    });
-}
+    if (inviteEmailInput) {
+        inviteEmailInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                inviteUserByEmail();
+            }
+        });
+    }
 });
 
-// Функция joinRoom больше не нужна, но оставим на всякий случай (не используется)
-async function joinRoom(roomId) {
-    // Эта функция больше не вызывается
-    console.log('joinRoom не используется - пользователь уже в комнате');
+// ========== SIGNALR ==========
+async function initSignalR() {
+    if (connection) return;
+    
+    try {
+        connection = new signalR.HubConnectionBuilder()
+            .withUrl(`${API_HOST}/chatHub`)
+            .withAutomaticReconnect()
+            .build();
+
+        connection.on("ReceiveMessage", (message) => {
+            const container = document.querySelector('.chat-messages');
+            const msg = {
+                ...message,
+                is_own: message.user_id === currentUserId
+            };
+            appendChatMessage(msg, container);
+            container.scrollTop = container.scrollHeight;
+        });
+
+        await connection.start();
+        console.log('SignalR connected');
+        
+        await connection.invoke("JoinRoom", currentRoomId, currentUserId);
+        console.log('Joined room:', currentRoomId);
+        
+    } catch (err) {
+        console.error('SignalR connection error:', err);
+        showNotification('Ошибка подключения чата', 'error');
+    }
 }
 
-// ─────────────────────────────────────────
-// Обновление информации о комнате (участники + таймер)
-// ─────────────────────────────────────────
+// ========== ОБНОВЛЕНИЕ ИНФОРМАЦИИ О КОМНАТЕ ==========
 async function refreshRoomInfo() {
     const token = localStorage.getItem('authToken');
     if (!currentRoomId || !token) return;
@@ -114,33 +131,27 @@ async function refreshRoomInfo() {
 
         const { room, participants } = data;
         
-        // Определяем, является ли текущий пользователь владельцем
         if (participants && participants.length > 0) {
             const firstParticipant = participants[0];
             isRoomOwner = firstParticipant && firstParticipant.user_id === currentUserId;
         }
 
-        // Показываем/скрываем кнопку "Пригласить" — только для создателя
         const inviteBtn = document.querySelector('.section-header .btn-primary');
         if (inviteBtn) {
             inviteBtn.style.display = isRoomOwner ? 'flex' : 'none';
         }
 
-        // Обновляем заголовок участников
         const header = document.querySelector('.sidebar-section .section-header h3');
         if (header) {
             header.textContent = `Участники (${participants?.length || 0}/${room?.max_capacity || 0})`;
         }
 
-        // Обновляем название комнаты в заголовке
         const roomTitleElement = document.querySelector('.room-title h1');
         if (roomTitleElement && room?.title) {
             roomTitleElement.textContent = room.title;
         }
 
-        // Обновляем список участников (убираем дубликаты)
         if (participants) {
-            // Убираем дубликаты по user_id
             const uniqueParticipants = [];
             const seenIds = new Set();
             for (const p of participants) {
@@ -152,12 +163,10 @@ async function refreshRoomInfo() {
             updateParticipantsList(uniqueParticipants);
         }
 
-        // Обновляем информацию о комнате в боковой панели
         if (room) {
             updateRoomInfoPanel(room);
         }
 
-        // Обновляем таймер
         if (room?.time_remaining_seconds !== null && room?.time_remaining_seconds !== undefined) {
             updateTimer(room.time_remaining_seconds);
         }
@@ -167,95 +176,7 @@ async function refreshRoomInfo() {
     }
 }
 
-// ─────────────────────────────────────────
-// Обновление списка участников
-// ─────────────────────────────────────────
-function updateParticipantsList(participants) {
-    const usersList = document.querySelector('.users-list');
-    if (!usersList) return;
-
-    if (!participants || participants.length === 0) {
-        usersList.innerHTML = `<p style="color: rgba(255,255,255,0.5); padding: 0.5rem;">Нет участников</p>`;
-        return;
-    }
-
-    usersList.innerHTML = participants.map((p, index) => {
-        const isHost = index === 0;
-        const isCurrentUser = p.user_id === currentUserId;
-        const statusClass = isCurrentUser ? 'speaking' : 'online';
-
-        return `
-            <div class="user-item ${isHost ? 'host' : ''}">
-                <img src="../images/iconprofile.png" alt="Аватар" class="user-avatar">
-                <div class="user-info">
-                    <span class="user-name">${escapeHtml(p.first_name)} ${escapeHtml(p.last_name)}${isCurrentUser ? ' (Вы)' : ''}</span>
-                    <span class="user-role">${isHost ? 'Создатель' : 'Участник'}</span>
-                </div>
-                <div class="user-status ${statusClass}"></div>
-            </div>
-        `;
-    }).join('');
-}
-
-// ─────────────────────────────────────────
-// Обновление панели информации о комнате
-// ─────────────────────────────────────────
-function updateRoomInfoPanel(room) {
-    // Обновляем информацию о вместимости
-    const capacityElement = document.querySelector('.room-info .info-item:nth-child(2) span');
-    if (capacityElement && room.max_capacity) {
-        capacityElement.textContent = `Максимум: ${room.max_capacity} человек`;
-    }
-    
-    // Обновляем ID комнаты
-    const roomIdElement = document.querySelector('.room-info .info-item:nth-child(3) span');
-    if (roomIdElement && room.id) {
-        roomIdElement.textContent = `ID: ${room.id}`;
-    }
-}
-
-// ─────────────────────────────────────────
-// Таймер
-// ─────────────────────────────────────────
-function updateTimer(secondsRemaining) {
-    const timerItem = document.querySelector('.room-info .info-item:first-child span');
-    if (!timerItem) return;
-
-    if (secondsRemaining <= 0) {
-        timerItem.textContent = 'Время истекло';
-        timerItem.style.color = '#ef4444';
-
-        if (pollingInterval) {
-            clearInterval(pollingInterval);
-            pollingInterval = null;
-        }
-        showNotification('Время бронирования истекло. Вы будете перенаправлены.', 'error');
-        setTimeout(() => { window.location.href = 'catalog.html'; }, 4000);
-        return;
-    }
-
-    const hours = Math.floor(secondsRemaining / 3600);
-    const minutes = Math.floor((secondsRemaining % 3600) / 60);
-    const seconds = secondsRemaining % 60;
-
-    let timeStr = '';
-    if (hours > 0) timeStr += `${hours}ч `;
-    timeStr += `${minutes}м ${seconds}с`;
-
-    timerItem.textContent = `Осталось: ${timeStr}`;
-
-    if (secondsRemaining < 300) {
-        timerItem.style.color = '#ef4444';
-    } else if (secondsRemaining < 900) {
-        timerItem.style.color = '#f97316';
-    } else {
-        timerItem.style.color = '';
-    }
-}
-
-// ─────────────────────────────────────────
-// Загрузка истории чата
-// ─────────────────────────────────────────
+// ========== ЗАГРУЗКА ИСТОРИИ ЧАТА (один раз) ==========
 async function loadChatHistory() {
     const token = localStorage.getItem('authToken');
     if (!currentRoomId || !token) return;
@@ -285,7 +206,6 @@ async function loadChatHistory() {
                 msg.is_own = msg.user_id === currentUserId;
                 appendChatMessage(msg, container);
             });
-            lastChatMessageId = data.messages[data.messages.length - 1].id;
         }
 
         container.scrollTop = container.scrollHeight;
@@ -295,41 +215,102 @@ async function loadChatHistory() {
     }
 }
 
-// ─────────────────────────────────────────
-// Polling новых сообщений
-// ─────────────────────────────────────────
-async function pollNewMessages() {
-    const token = localStorage.getItem('authToken');
-    if (!currentRoomId || !token) return;
+// ========== ОТПРАВКА СООБЩЕНИЯ ЧЕРЕЗ SIGNALR ==========
+async function sendMessage() {
+    const input = document.getElementById('messageInput');
+    const message = input?.value?.trim();
+    if (!message) return;
+
+    if (!connection || connection.state !== signalR.HubConnectionState.Connected) {
+        showNotification('Чат не подключён', 'error');
+        return;
+    }
 
     try {
-        const res = await fetch(
-            `${API_BASE_URL}/Room/${currentRoomId}/chat?afterId=${lastChatMessageId}`,
-            { headers: { 'Authorization': `Bearer ${token}` } }
-        );
-        const data = await res.json();
-
-        if (!data.success || !data.messages || !data.messages.length) return;
-
-        const container = document.querySelector('.chat-messages');
-        if (!container) return;
-
-        data.messages.forEach(msg => {
-            msg.is_own = msg.user_id === currentUserId;
-            appendChatMessage(msg, container);
-        });
-
-        lastChatMessageId = data.messages[data.messages.length - 1].id;
-        container.scrollTop = container.scrollHeight;
-
+        await connection.invoke("SendMessage", currentRoomId, message, currentUserId);
+        input.value = '';
     } catch (e) {
-        console.error('Ошибка polling чата:', e);
+        console.error('Send error:', e);
+        showNotification('Ошибка отправки сообщения', 'error');
     }
 }
 
-// ─────────────────────────────────────────
-// Отображение одного сообщения в чате
-// ─────────────────────────────────────────
+// ========== ОСТАЛЬНЫЕ ФУНКЦИИ (БЕЗ ИЗМЕНЕНИЙ) ==========
+
+function updateParticipantsList(participants) {
+    const usersList = document.querySelector('.users-list');
+    if (!usersList) return;
+
+    if (!participants || participants.length === 0) {
+        usersList.innerHTML = `<p style="color: rgba(255,255,255,0.5); padding: 0.5rem;">Нет участников</p>`;
+        return;
+    }
+
+    usersList.innerHTML = participants.map((p, index) => {
+        const isHost = index === 0;
+        const isCurrentUser = p.user_id === currentUserId;
+        const statusClass = isCurrentUser ? 'speaking' : 'online';
+
+        return `
+            <div class="user-item ${isHost ? 'host' : ''}">
+                <img src="../images/iconprofile.png" alt="Аватар" class="user-avatar">
+                <div class="user-info">
+                    <span class="user-name">${escapeHtml(p.first_name)} ${escapeHtml(p.last_name)}${isCurrentUser ? ' (Вы)' : ''}</span>
+                    <span class="user-role">${isHost ? 'Создатель' : 'Участник'}</span>
+                </div>
+                <div class="user-status ${statusClass}"></div>
+            </div>
+        `;
+    }).join('');
+}
+
+function updateRoomInfoPanel(room) {
+    const capacityElement = document.querySelector('.room-info .info-item:nth-child(2) span');
+    if (capacityElement && room.max_capacity) {
+        capacityElement.textContent = `Максимум: ${room.max_capacity} человек`;
+    }
+    
+    const roomIdElement = document.querySelector('.room-info .info-item:nth-child(3) span');
+    if (roomIdElement && room.id) {
+        roomIdElement.textContent = `ID: ${room.id}`;
+    }
+}
+
+function updateTimer(secondsRemaining) {
+    const timerItem = document.querySelector('.room-info .info-item:first-child span');
+    if (!timerItem) return;
+
+    if (secondsRemaining <= 0) {
+        timerItem.textContent = 'Время истекло';
+        timerItem.style.color = '#ef4444';
+
+        if (connection) {
+            connection.stop();
+        }
+        showNotification('Время бронирования истекло. Вы будете перенаправлены.', 'error');
+        setTimeout(() => { window.location.href = 'catalog.html'; }, 4000);
+        return;
+    }
+
+    const hours = Math.floor(secondsRemaining / 3600);
+    const minutes = Math.floor((secondsRemaining % 3600) / 60);
+    const seconds = secondsRemaining % 60;
+
+    let timeStr = '';
+    if (hours > 0) timeStr += `${hours}ч `;
+    timeStr += `${minutes}м ${seconds}с`;
+
+    timerItem.textContent = `Осталось: ${timeStr}`;
+
+    if (secondsRemaining < 300) {
+        timerItem.style.color = '#ef4444';
+    } else if (secondsRemaining < 900) {
+        timerItem.style.color = '#f97316';
+    } else {
+        timerItem.style.color = '';
+    }
+}
+
 function appendChatMessage(msg, container) {
     const div = document.createElement('div');
     div.className = `message ${msg.is_own ? 'own' : ''}`;
@@ -357,65 +338,18 @@ function appendChatMessage(msg, container) {
     container.appendChild(div);
 }
 
-// ─────────────────────────────────────────
-// Отправка сообщения
-// ─────────────────────────────────────────
-async function sendMessage() {
-    const input = document.getElementById('messageInput');
-    const message = input?.value?.trim();
-    if (!message) return;
-
-    const token = localStorage.getItem('authToken');
-
-    try {
-        const formData = new FormData();
-        formData.append('message', message);
-        formData.append('userId', currentUserId);
-
-        const res = await fetch(`${API_BASE_URL}/Room/${currentRoomId}/chat/send`, {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${token}` },
-            body: formData
-        });
-
-        const data = await res.json();
-
-        if (data.success) {
-            input.value = '';
-
-            const container = document.querySelector('.chat-messages');
-            if (container) {
-                appendChatMessage({
-                    id: data.message_id,
-                    message: message,
-                    sent_at: data.sent_at || new Date().toISOString(),
-                    is_own: true,
-                    user_id: currentUserId,
-                    author_name: 'Вы'
-                }, container);
-                container.scrollTop = container.scrollHeight;
-                lastChatMessageId = data.message_id;
-            }
-        } else {
-            showNotification(data.message || 'Ошибка отправки', 'error');
-        }
-    } catch (e) {
-        console.error('Send message error:', e);
-        showNotification('Ошибка отправки сообщения', 'error');
-    }
-}
-
-// ─────────────────────────────────────────
-// Выход из комнаты
-// ─────────────────────────────────────────
 async function leaveRoom() {
     if (!confirm('Вы уверены, что хотите покинуть комнату?')) return;
 
     const token = localStorage.getItem('authToken');
 
-    if (pollingInterval) {
-        clearInterval(pollingInterval);
-        pollingInterval = null;
+    if (connection) {
+        try {
+            await connection.invoke("LeaveRoom", currentRoomId);
+            await connection.stop();
+        } catch (e) {
+            console.error('Error leaving SignalR room:', e);
+        }
     }
 
     try {
@@ -435,9 +369,9 @@ async function leaveRoom() {
     window.location.href = '../index.html';
 }
 
-// ─────────────────────────────────────────
-// Модальное окно приглашения
-// ─────────────────────────────────────────
+// ========== ОСТАЛЬНЫЕ ФУНКЦИИ (showInviteModal, searchUsers, inviteUser, inviteUserByEmail и т.д.) ==========
+// ... (оставь их без изменений, они такие же как были)
+
 function showInviteModal() {
     if (!isRoomOwner) {
         showNotification('Только создатель комнаты может приглашать участников', 'error');
@@ -478,13 +412,13 @@ function showInviteMethod(method) {
         updateInviteLink();
     }
     
-    // Очищаем поле email при открытии
     if (method === 'email') {
         const emailInput = document.getElementById('inviteEmail');
         if (emailInput) emailInput.value = '';
         emailInput?.focus();
     }
 }
+
 function backToInviteMethods() {
     document.querySelectorAll('.invite-method').forEach(el => {
         el.style.display = 'none';
@@ -594,6 +528,113 @@ async function inviteUser(invitedUserId) {
     }
 }
 
+async function inviteUserByEmail() {
+    const token = localStorage.getItem('authToken');
+    if (!isRoomOwner) {
+        showNotification('Только создатель может приглашать участников', 'error');
+        return;
+    }
+
+    const emailInput = document.getElementById('inviteEmail');
+    const email = emailInput?.value?.trim();
+    
+    if (!email) {
+        showNotification('Введите email пользователя', 'error');
+        return;
+    }
+    
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        showNotification('Введите корректный email адрес', 'error');
+        return;
+    }
+
+    const inviteBtn = document.querySelector('#emailMethod .btn-primary');
+    const originalText = inviteBtn?.innerHTML;
+    if (inviteBtn) {
+        inviteBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Отправка...';
+        inviteBtn.disabled = true;
+    }
+
+    try {
+        const searchResponse = await fetch(
+            `${API_BASE_URL}/Room/${currentRoomId}/search-users?query=${encodeURIComponent(email)}`,
+            { headers: { 'Authorization': `Bearer ${token}` } }
+        );
+        const searchData = await searchResponse.json();
+        
+        let invitedUserId = null;
+        
+        if (searchData.success && searchData.users && searchData.users.length > 0) {
+            const exactMatch = searchData.users.find(u => u.email.toLowerCase() === email.toLowerCase());
+            if (exactMatch) {
+                invitedUserId = exactMatch.user_id;
+                
+                if (exactMatch.is_already_in_room) {
+                    showNotification('Пользователь уже в комнате', 'warning');
+                    return;
+                }
+            }
+        }
+        
+        if (invitedUserId) {
+            const formData = new FormData();
+            formData.append('roomId', currentRoomId);
+            formData.append('invitedUserId', invitedUserId);
+            
+            const inviteResponse = await fetch(`${API_BASE_URL}/Room/invite`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` },
+                body: formData
+            });
+            
+            const inviteData = await inviteResponse.json();
+            
+            if (inviteData.success) {
+                showNotification(`Приглашение отправлено на ${email}`, 'success');
+                if (emailInput) emailInput.value = '';
+                closeModal('inviteModal');
+                await refreshRoomInfo();
+            } else {
+                showNotification(inviteData.message || 'Ошибка при приглашении', 'error');
+            }
+        } else {
+            const formData = new FormData();
+            formData.append('roomId', currentRoomId);
+            formData.append('email', email);
+            formData.append('inviterUserId', currentUserId);
+            
+            try {
+                const emailInviteResponse = await fetch(`${API_BASE_URL}/Room/invite-by-email`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    body: formData
+                });
+                
+                const emailInviteData = await emailInviteResponse.json();
+                
+                if (emailInviteResponse.ok && emailInviteData.success) {
+                    showNotification(emailInviteData.message, 'success');
+                    if (emailInput) emailInput.value = '';
+                    closeModal('inviteModal');
+                } else {
+                    showNotification('Пользователь с таким email не зарегистрирован в системе. Приглашение не может быть отправлено.', 'error');
+                }
+            } catch (emailEndpointError) {
+                showNotification('Пользователь с таким email не зарегистрирован в системе. Приглашение не может быть отправлено.', 'error');
+            }
+        }
+    } catch (error) {
+        console.error('Invite by email error:', error);
+        showNotification('Ошибка при отправке приглашения', 'error');
+    } finally {
+        if (inviteBtn) {
+            inviteBtn.innerHTML = originalText;
+            inviteBtn.disabled = false;
+        }
+    }
+}
+
 function toggleChat() {
     const chat = document.querySelector('.chat-sidebar');
     if (chat) {
@@ -601,9 +642,6 @@ function toggleChat() {
     }
 }
 
-// ─────────────────────────────────────────
-// Вспомогательные функции
-// ─────────────────────────────────────────
 function formatTime(date) {
     if (!date) return '';
     const d = new Date(date);
@@ -667,7 +705,6 @@ function showNotification(message, type = 'info') {
     }, 4000);
 }
 
-// Добавляем стили для анимаций
 if (!document.querySelector('#room-styles')) {
     const style = document.createElement('style');
     style.id = 'room-styles';
@@ -685,121 +722,4 @@ if (!document.querySelector('#room-styles')) {
         }
     `;
     document.head.appendChild(style);
-}
-async function inviteUserByEmail() {
-    const token = localStorage.getItem('authToken');
-    if (!isRoomOwner) {
-        showNotification('Только создатель может приглашать участников', 'error');
-        return;
-    }
-
-    const emailInput = document.getElementById('inviteEmail');
-    const email = emailInput?.value?.trim();
-    
-    if (!email) {
-        showNotification('Введите email пользователя', 'error');
-        return;
-    }
-    
-    // Простая валидация email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-        showNotification('Введите корректный email адрес', 'error');
-        return;
-    }
-
-    // Показываем индикатор загрузки
-    const inviteBtn = document.querySelector('#emailMethod .btn-primary');
-    const originalText = inviteBtn?.innerHTML;
-    if (inviteBtn) {
-        inviteBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Отправка...';
-        inviteBtn.disabled = true;
-    }
-
-    try {
-        // Сначала ищем пользователя по email через existing API
-        const searchResponse = await fetch(
-            `${API_BASE_URL}/Room/${currentRoomId}/search-users?query=${encodeURIComponent(email)}`,
-            { headers: { 'Authorization': `Bearer ${token}` } }
-        );
-        const searchData = await searchResponse.json();
-        
-        let invitedUserId = null;
-        
-        // Если пользователь найден по email
-        if (searchData.success && searchData.users && searchData.users.length > 0) {
-            // Ищем точное совпадение email
-            const exactMatch = searchData.users.find(u => u.email.toLowerCase() === email.toLowerCase());
-            if (exactMatch) {
-                invitedUserId = exactMatch.user_id;
-                
-                // Проверяем, не в комнате ли уже пользователь
-                if (exactMatch.is_already_in_room) {
-                    showNotification('Пользователь уже в комнате', 'warning');
-                    return;
-                }
-            }
-        }
-        
-        if (invitedUserId) {
-            // Пользователь найден, приглашаем через существующий метод
-            const formData = new FormData();
-            formData.append('roomId', currentRoomId);
-            formData.append('invitedUserId', invitedUserId);
-            
-            const inviteResponse = await fetch(`${API_BASE_URL}/Room/invite`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` },
-                body: formData
-            });
-            
-            const inviteData = await inviteResponse.json();
-            
-            if (inviteData.success) {
-                showNotification(`Приглашение отправлено на ${email}`, 'success');
-                if (emailInput) emailInput.value = '';
-                closeModal('inviteModal');
-                await refreshRoomInfo();
-            } else {
-                showNotification(inviteData.message || 'Ошибка при приглашении', 'error');
-            }
-        } else {
-            // Пользователь не найден в системе, отправляем приглашение на email через бэкенд
-            // Используем специальный endpoint для приглашения по email (если он есть на бэкенде)
-            const formData = new FormData();
-            formData.append('roomId', currentRoomId);
-            formData.append('email', email);
-            formData.append('inviterUserId', currentUserId);
-            
-            // Пробуем новый endpoint, если его нет - показываем сообщение
-            try {
-                const emailInviteResponse = await fetch(`${API_BASE_URL}/Room/invite-by-email`, {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}` },
-                    body: formData
-                });
-                
-                const emailInviteData = await emailInviteResponse.json();
-                
-                if (emailInviteResponse.ok && emailInviteData.success) {
-                    showNotification(emailInviteData.message, 'success');
-                    if (emailInput) emailInput.value = '';
-                    closeModal('inviteModal');
-                } else {
-                    showNotification('Пользователь с таким email не зарегистрирован в системе. Приглашение не может быть отправлено.', 'error');
-                }
-            } catch (emailEndpointError) {
-                // Если endpoint не существует
-                showNotification('Пользователь с таким email не зарегистрирован в системе. Приглашение не может быть отправлено.', 'error');
-            }
-        }
-    } catch (error) {
-        console.error('Invite by email error:', error);
-        showNotification('Ошибка при отправке приглашения', 'error');
-    } finally {
-        if (inviteBtn) {
-            inviteBtn.innerHTML = originalText;
-            inviteBtn.disabled = false;
-        }
-    }
 }
