@@ -40,8 +40,7 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     // Загружаем информацию о комнате
     await refreshRoomInfo();
-    await loadChatHistory();
-
+    
     // ========== ПОДКЛЮЧАЕМ SIGNALR ДЛЯ ЧАТА ==========
     await initSignalR();
 
@@ -53,7 +52,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         });
     }
 
-    // Скрыть кнопку "Назад" в модале по умолчанию
+    // Скрыть кнопку "Назад" в модале по ум-default
     const backBtn = document.getElementById('backButton');
     if (backBtn) backBtn.style.display = 'none';
 
@@ -68,16 +67,6 @@ document.addEventListener('DOMContentLoaded', async function () {
             closeModal('inviteModal');
         }
     };
-
-    const inviteEmailInput = document.getElementById('inviteEmail');
-    if (inviteEmailInput) {
-        inviteEmailInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                inviteUserByEmail();
-            }
-        });
-    }
 });
 
 // ========== SIGNALR ==========
@@ -85,6 +74,13 @@ async function initSignalR() {
     if (connection) return;
     
     try {
+        // Проверяем, что signalR загружен
+        if (typeof signalR === 'undefined') {
+            console.error('SignalR библиотека не загружена');
+            showNotification('Ошибка загрузки чата, обновите страницу', 'error');
+            return;
+        }
+        
         connection = new signalR.HubConnectionBuilder()
             .withUrl(`${API_HOST}/chatHub`)
             .withAutomaticReconnect()
@@ -92,10 +88,18 @@ async function initSignalR() {
 
         connection.on("ReceiveMessage", (message) => {
             const container = document.querySelector('.chat-messages');
+            if (!container) return;
+            
             const msg = {
                 ...message,
                 is_own: message.user_id === currentUserId
             };
+            
+            // Удаляем системное сообщение "Вы вошли в комнату", если оно есть
+            if (container.querySelector('.message.system')) {
+                container.innerHTML = '';
+            }
+            
             appendChatMessage(msg, container);
             container.scrollTop = container.scrollHeight;
         });
@@ -106,9 +110,22 @@ async function initSignalR() {
         await connection.invoke("JoinRoom", currentRoomId, currentUserId);
         console.log('Joined room:', currentRoomId);
         
+        // Добавляем системное сообщение о входе
+        const container = document.querySelector('.chat-messages');
+        if (container) {
+            container.innerHTML = `
+                <div class="message system">
+                    <div class="message-content">
+                        <p>Вы вошли в комнату</p>
+                    </div>
+                    <span class="message-time">${formatTime(new Date())}</span>
+                </div>
+            `;
+        }
+        
     } catch (err) {
         console.error('SignalR connection error:', err);
-        showNotification('Ошибка подключения чата', 'error');
+        showNotification('Ошибка подключения чата. Проверьте соединение.', 'error');
     }
 }
 
@@ -176,52 +193,13 @@ async function refreshRoomInfo() {
     }
 }
 
-// ========== ЗАГРУЗКА ИСТОРИИ ЧАТА (один раз) ==========
-async function loadChatHistory() {
-    const token = localStorage.getItem('authToken');
-    if (!currentRoomId || !token) return;
-
-    try {
-        const res = await fetch(`${API_BASE_URL}/Room/${currentRoomId}/chat`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const data = await res.json();
-
-        if (!data.success) return;
-
-        const container = document.querySelector('.chat-messages');
-        if (!container) return;
-
-        container.innerHTML = `
-            <div class="message system">
-                <div class="message-content">
-                    <p>Вы вошли в комнату</p>
-                </div>
-                <span class="message-time">${formatTime(new Date())}</span>
-            </div>
-        `;
-
-        if (data.messages && data.messages.length > 0) {
-            data.messages.forEach(msg => {
-                msg.is_own = msg.user_id === currentUserId;
-                appendChatMessage(msg, container);
-            });
-        }
-
-        container.scrollTop = container.scrollHeight;
-
-    } catch (e) {
-        console.error('Ошибка загрузки чата:', e);
-    }
-}
-
 // ========== ОТПРАВКА СООБЩЕНИЯ ЧЕРЕЗ SIGNALR ==========
 async function sendMessage() {
     const input = document.getElementById('messageInput');
     const message = input?.value?.trim();
     if (!message) return;
 
-    if (!connection || connection.state !== signalR.HubConnectionState.Connected) {
+    if (!connection || connection.state !== 'Connected') {
         showNotification('Чат не подключён', 'error');
         return;
     }
@@ -235,7 +213,7 @@ async function sendMessage() {
     }
 }
 
-// ========== ОСТАЛЬНЫЕ ФУНКЦИИ (БЕЗ ИЗМЕНЕНИЙ) ==========
+// ========== ОСТАЛЬНЫЕ ФУНКЦИИ ==========
 
 function updateParticipantsList(participants) {
     const usersList = document.querySelector('.users-list');
@@ -369,9 +347,6 @@ async function leaveRoom() {
     window.location.href = '../index.html';
 }
 
-// ========== ОСТАЛЬНЫЕ ФУНКЦИИ (showInviteModal, searchUsers, inviteUser, inviteUserByEmail и т.д.) ==========
-// ... (оставь их без изменений, они такие же как были)
-
 function showInviteModal() {
     if (!isRoomOwner) {
         showNotification('Только создатель комнаты может приглашать участников', 'error');
@@ -410,12 +385,6 @@ function showInviteMethod(method) {
     
     if (method === 'link') {
         updateInviteLink();
-    }
-    
-    if (method === 'email') {
-        const emailInput = document.getElementById('inviteEmail');
-        if (emailInput) emailInput.value = '';
-        emailInput?.focus();
     }
 }
 
