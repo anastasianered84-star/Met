@@ -199,7 +199,7 @@ async function sendMessage() {
     const message = input?.value?.trim();
     if (!message) return;
 
-    if (!connection || connection.state !== 'Connected') {
+    if (!connection || connection.state !== signalR.HubConnectionState.Connected) {
         showNotification('Чат не подключён', 'error');
         return;
     }
