@@ -24,7 +24,7 @@
             <div class="user-actions">
                 <div class="user-profile">
                     <img src="../images/iconprofile.png" alt="Аватар" class="user-avatar">
-                    <span>Анастасия</span>
+                    <span id="headerUserName">...</span>
                 </div>
                 <button class="btn btn-outline" onclick="leaveRoom()">
                     <i class="fa-solid fa-door-open"></i> Выйти
@@ -45,74 +45,29 @@
                             <i class="fa-solid fa-plus"></i> Пригласить
                         </button>
                     </div>
-                    <div class="users-list">
-                        <div class="user-item host">
-                            <img src="../images/iconprofile.png" alt="Аватар" class="user-avatar">
-                            <div class="user-info">
-                                <span class="user-name">Анастасия</span>
-                                <span class="user-role">Создатель</span>
-                            </div>
-                            <div class="user-status online"></div>
-                        </div>
-                        <div class="user-item">
-                            <img src="../images/iconprofile.png" alt="Аватар" class="user-avatar">
-                            <div class="user-info">
-                                <span class="user-name">Мария</span>
-                                <span class="user-role">Участник</span>
-                            </div>
-                            <div class="user-status online"></div>
-                        </div>
-                        <div class="user-item">
-                            <img src="../images/iconprofile.png" alt="Аватар" class="user-avatar">
-                            <div class="user-info">
-                                <span class="user-name">Дмитрий</span>
-                                <span class="user-role">Участник</span>
-                            </div>
-                            <div class="user-status speaking"></div>
-                        </div>
-                        <div class="user-item">
-                            <img src="../images/iconprofile.png" alt="Аватар" class="user-avatar">
-                            <div class="user-info">
-                                <span class="user-name">Екатерина</span>
-                                <span class="user-role">Участник</span>
-                            </div>
-                            <div class="user-status online"></div>
-                        </div>
-                        <div class="user-item">
-                            <img src="../images/iconprofile.png" alt="Аватар" class="user-avatar">
-                            <div class="user-info">
-                                <span class="user-name">Иван</span>
-                                <span class="user-role">Участник</span>
-                            </div>
-                            <div class="user-status away"></div>
-                        </div>
-                        <div class="user-item">
-                            <img src="../images/iconprofile.png" alt="Аватар" class="user-avatar">
-                            <div class="user-info">
-                                <span class="user-name">Сергей</span>
-                                <span class="user-role">Участник</span>
-                            </div>
-                            <div class="user-status offline"></div>
-                        </div>
-                    </div>
+                   <div class="users-list">
+    <div style="color: rgba(255,255,255,0.5); padding: 1rem; text-align: center;">
+        <i class="fa-solid fa-spinner fa-spin"></i> Загрузка участников...
+    </div>
+</div>
                 </div>
 
                 <div class="sidebar-section">
                     <h3>Информация о комнате</h3>
                     <div class="room-info">
-                        <div class="info-item">
-                            <i class="fa-solid fa-clock"></i>
-                            <span>Осталось: 1ч 25м</span>
-                        </div>
-                        <div class="info-item">
-                            <i class="fa-solid fa-users"></i>
-                            <span>Максимум: 12 человек</span>
-                        </div>
-                        <div class="info-item">
-                            <i class="fa-solid fa-wifi"></i>
-                            <span>Стабильное соединение</span>
-                        </div>
-                    </div>
+    <div class="info-item">
+        <i class="fa-solid fa-clock"></i>
+        <span><i class="fa-solid fa-spinner fa-spin"></i> Загрузка...</span>
+    </div>
+    <div class="info-item">
+        <i class="fa-solid fa-users"></i>
+        <span><i class="fa-solid fa-spinner fa-spin"></i> Загрузка...</span>
+    </div>
+    <div class="info-item">
+        <i class="fa-solid fa-wifi"></i>
+        <span>Стабильное соединение</span>
+    </div>
+</div>
                 </div>
             </aside>
 
@@ -125,48 +80,10 @@
                 </div>
 
                 <div class="chat-messages">
-                    <div class="message system">
-                        <div class="message-content">
-                            <p>Вы присоединились к комнате "Киберпанк-лаунж"</p>
-                        </div>
-                        <span class="message-time">12:30</span>
-                    </div>
-
-                    <div class="message">
-                        <img src="../images/iconprofile.png" alt="Аватар" class="message-avatar">
-                        <div class="message-content">
-                            <span class="message-author">Мария</span>
-                            <p>Привет всем! Как вам атмосфера комнаты?</p>
-                        </div>
-                        <span class="message-time">12:32</span>
-                    </div>
-
-                    <div class="message">
-                        <img src="../images/iconprofile.png" alt="Аватар" class="message-avatar">
-                        <div class="message-content">
-                            <span class="message-author">Дмитрий</span>
-                            <p>Очень круто! Неоновые огни просто завораживают 😍</p>
-                        </div>
-                        <span class="message-time">12:33</span>
-                    </div>
-
-                    <div class="message own">
-                        <div class="message-content">
-                            <p>Согласен! Отличная работа дизайнеров</p>
-                        </div>
-                        <span class="message-time">12:34</span>
-                    </div>
-
-                    <div class="message">
-                        <img src="../images/iconprofile.png" alt="Аватар" class="message-avatar">
-                        <div class="message-content">
-                            <span class="message-author">Екатерина</span>
-                            <p>Кто-то уже пробовал интерактивные элементы?</p>
-                        </div>
-                        <span class="message-time">12:35</span>
-                    </div>
-                </div>
-
+    <div style="color: rgba(255,255,255,0.5); padding: 1rem; text-align: center;">
+        <i class="fa-solid fa-spinner fa-spin"></i> Загрузка чата...
+    </div>
+</div>
                 <div class="chat-input">
                     <input type="text" placeholder="Напишите сообщение..." id="messageInput">
                     <button class="btn btn-primary" onclick="sendMessage()">

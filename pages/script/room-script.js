@@ -212,7 +212,11 @@ async function sendMessage() {
         showNotification('Ошибка отправки сообщения', 'error');
     }
 }
-
+const headerName = document.getElementById('headerUserName');
+if (headerName) {
+    const firstName = localStorage.getItem('userFirstName') || '';
+    headerName.textContent = firstName;
+}
 // ========== ОСТАЛЬНЫЕ ФУНКЦИИ ==========
 
 function updateParticipantsList(participants) {
