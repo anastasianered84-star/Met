@@ -316,15 +316,14 @@ function getBookingActions(booking, status, isCurrentlyActive = false) {
     switch (status) {
         case 'active':
             if (isCurrentlyActive) {
+                // Активная бронь — только кнопка "Подключиться"
                 return `
                     <a href="room.html?id=${booking.room_id}&bookingId=${booking.id}" class="btn btn-primary">
                         <i class="fa-solid fa-play"></i> Подключиться
                     </a>
-                    <button class="btn btn-outline" onclick="cancelBooking(${booking.id})">
-                        <i class="fa-solid fa-times"></i> Отменить
-                    </button>
                 `;
             } else {
+                // Активная по статусу, но ещё не началась (по факту предстоящая) — только "Отменить"
                 return `
                     <button class="btn btn-outline" onclick="cancelBooking(${booking.id})">
                         <i class="fa-solid fa-times"></i> Отменить
@@ -332,24 +331,16 @@ function getBookingActions(booking, status, isCurrentlyActive = false) {
                 `;
             }
         case 'upcoming':
+            // Предстоящие — только "Отменить"
             return `
                 <button class="btn btn-outline" onclick="cancelBooking(${booking.id})">
                     <i class="fa-solid fa-times"></i> Отменить
                 </button>
-                <button class="btn btn-primary" onclick="editBooking(${booking.id}, ${booking.room_id})">
-                    <i class="fa-solid fa-edit"></i> Изменить
-                </button>
             `;
         case 'completed':
         case 'cancelled':
-            return `
-                <button class="btn btn-primary" onclick="bookAgain(${booking.room_id})">
-                    <i class="fa-solid fa-repeat"></i> Забронировать снова
-                </button>
-                <button class="btn btn-outline" onclick="viewBookingDetails(${booking.id})">
-                    <i class="fa-solid fa-info-circle"></i> Детали
-                </button>
-            `;
+            // Завершённые и отменённые — без кнопок (или можно "Удалить из истории")
+            return ``; // Пусто — нет кнопок
         default:
             return '';
     }
@@ -394,16 +385,26 @@ async function cancelBooking(bookingId) {
     const token = localStorage.getItem('authToken');
 
     try {
-        const response = await fetch(`${API_BASE_URL}/Room/bookings/${bookingId}/cancel`, {
+        showNotification('Отмена бронирования...', 'info');
+        
+        const response = await fetch(`${API_BASE_URL}/Payment/refund`, {
             method: 'POST',
-            headers: { 'Authorization': `Bearer ${token}` }
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ bookingId: bookingId })
         });
 
         const data = await response.json();
 
         if (data.success) {
-            showNotification('✅ Бронирование отменено', 'success');
-            setTimeout(() => window.location.reload(), 1000);
+            if (data.refunded) {
+                showNotification(`✅ ${data.message}`, 'success');
+            } else {
+                showNotification('✅ Бронирование отменено', 'success');
+            }
+            setTimeout(() => window.location.reload(), 1500);
         } else {
             showNotification(data.message || 'Ошибка при отмене', 'error');
         }
@@ -412,7 +413,6 @@ async function cancelBooking(bookingId) {
         showNotification('Ошибка при отмене бронирования', 'error');
     }
 }
-
 function editBooking(bookingId, roomId) {
     window.location.href = `edit-booking.html?id=${bookingId}&room=${roomId}`;
 }

@@ -18,6 +18,28 @@ document.addEventListener('DOMContentLoaded', async function() {
         passwordInput.addEventListener('input', checkPasswordStrength);
     }
     
+    // Валидация полей в реальном времени
+    const firstNameInput = document.getElementById('firstName');
+    const lastNameInput = document.getElementById('lastName');
+    const emailInput = document.getElementById('regEmail');
+    const confirmPasswordInput = document.getElementById('confirmPassword');
+    
+    if (firstNameInput) {
+        firstNameInput.addEventListener('input', () => validateField(firstNameInput, 'firstNameError'));
+    }
+    if (lastNameInput) {
+        lastNameInput.addEventListener('input', () => validateField(lastNameInput, 'lastNameError'));
+    }
+    if (emailInput) {
+        emailInput.addEventListener('input', () => validateField(emailInput, 'emailError'));
+    }
+    if (passwordInput) {
+        passwordInput.addEventListener('input', () => validateField(passwordInput, 'passwordError'));
+    }
+    if (confirmPasswordInput) {
+        confirmPasswordInput.addEventListener('input', () => validatePasswordMatch());
+    }
+    
     // Отправка кода
     const sendCodeBtn = document.getElementById('sendCodeBtn');
     if (sendCodeBtn) {
@@ -36,10 +58,216 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 });
 
-async function sendVerificationCode() {
-    const email = document.getElementById('regEmail').value;
+// Валидация отдельного поля
+function validateField(input, errorId) {
+    const value = input.value.trim();
+    let isValid = true;
+    let errorMessage = '';
     
-    if (!email || !email.includes('@')) {
+    if (input.id === 'firstName') {
+        if (!value) {
+            isValid = false;
+            errorMessage = 'Введите имя';
+        } else if (value.length < 2) {
+            isValid = false;
+            errorMessage = 'Имя должно содержать минимум 2 символа';
+        } else if (!/^[а-яА-ЯёЁa-zA-Z\s-]+$/.test(value)) {
+            isValid = false;
+            errorMessage = 'Имя может содержать только буквы';
+        }
+    }
+    
+    if (input.id === 'lastName') {
+        if (!value) {
+            isValid = false;
+            errorMessage = 'Введите фамилию';
+        } else if (value.length < 2) {
+            isValid = false;
+            errorMessage = 'Фамилия должна содержать минимум 2 символа';
+        } else if (!/^[а-яА-ЯёЁa-zA-Z\s-]+$/.test(value)) {
+            isValid = false;
+            errorMessage = 'Фамилия может содержать только буквы';
+        }
+    }
+    
+    if (input.id === 'regEmail') {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!value) {
+            isValid = false;
+            errorMessage = 'Введите email';
+        } else if (!emailRegex.test(value)) {
+            isValid = false;
+            errorMessage = 'Введите корректный email';
+        }
+    }
+    
+    if (input.id === 'regPassword') {
+        if (!value) {
+            isValid = false;
+            errorMessage = 'Введите пароль';
+        } else if (value.length < 6) {
+            isValid = false;
+            errorMessage = 'Пароль должен быть не менее 6 символов';
+        }
+    }
+    
+    const errorElement = document.getElementById(errorId);
+    if (errorElement) {
+        if (!isValid) {
+            errorElement.textContent = errorMessage;
+            errorElement.style.display = 'block';
+            input.style.borderColor = '#ef4444';
+        } else {
+            errorElement.style.display = 'none';
+            input.style.borderColor = '#10b981';
+        }
+    }
+    
+    return isValid;
+}
+
+// Проверка совпадения паролей
+function validatePasswordMatch() {
+    const password = document.getElementById('regPassword')?.value || '';
+    const confirmPassword = document.getElementById('confirmPassword')?.value || '';
+    const errorElement = document.getElementById('confirmError');
+    
+    if (!confirmPassword) {
+        if (errorElement) {
+            errorElement.textContent = 'Подтвердите пароль';
+            errorElement.style.display = 'block';
+        }
+        return false;
+    }
+    
+    if (password !== confirmPassword) {
+        if (errorElement) {
+            errorElement.textContent = 'Пароли не совпадают';
+            errorElement.style.display = 'block';
+        }
+        document.getElementById('confirmPassword').style.borderColor = '#ef4444';
+        return false;
+    } else {
+        if (errorElement) {
+            errorElement.style.display = 'none';
+        }
+        document.getElementById('confirmPassword').style.borderColor = '#10b981';
+        return true;
+    }
+}
+
+// Полная валидация формы регистрации
+function validateRegistrationForm() {
+    const firstName = document.getElementById('firstName')?.value.trim();
+    const lastName = document.getElementById('lastName')?.value.trim();
+    const email = document.getElementById('regEmail')?.value.trim();
+    const password = document.getElementById('regPassword')?.value;
+    const confirmPassword = document.getElementById('confirmPassword')?.value;
+    const code = document.getElementById('verificationCode')?.value.trim();
+    const agreeTerms = document.getElementById('agreeTerms')?.checked;
+    
+    let isValid = true;
+    const errors = [];
+    
+    // Имя
+    if (!firstName) {
+        errors.push('Введите имя');
+        isValid = false;
+    } else if (firstName.length < 2) {
+        errors.push('Имя должно содержать минимум 2 символа');
+        isValid = false;
+    }
+    
+    // Фамилия
+    if (!lastName) {
+        errors.push('Введите фамилию');
+        isValid = false;
+    } else if (lastName.length < 2) {
+        errors.push('Фамилия должна содержать минимум 2 символа');
+        isValid = false;
+    }
+    
+    // Email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email) {
+        errors.push('Введите email');
+        isValid = false;
+    } else if (!emailRegex.test(email)) {
+        errors.push('Введите корректный email');
+        isValid = false;
+    }
+    
+    // Пароль
+    if (!password) {
+        errors.push('Введите пароль');
+        isValid = false;
+    } else if (password.length < 6) {
+        errors.push('Пароль должен быть не менее 6 символов');
+        isValid = false;
+    }
+    
+    // Подтверждение пароля
+    if (password !== confirmPassword) {
+        errors.push('Пароли не совпадают');
+        isValid = false;
+    }
+    
+    // Код подтверждения
+    if (!code) {
+        errors.push('Введите код подтверждения');
+        isValid = false;
+    } else if (!/^\d{6}$/.test(code)) {
+        errors.push('Код должен состоять из 6 цифр');
+        isValid = false;
+    }
+    
+    // Согласие с условиями
+    if (!agreeTerms) {
+        errors.push('Примите условия использования');
+        isValid = false;
+    }
+    
+    if (!isValid) {
+        showNotification(errors[0], 'error');
+    }
+    
+    return isValid;
+}
+
+// Полная валидация формы логина
+function validateLoginForm() {
+    const email = document.getElementById('email')?.value.trim();
+    const password = document.getElementById('password')?.value;
+    
+    if (!email) {
+        showNotification('Введите email', 'error');
+        return false;
+    }
+    
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        showNotification('Введите корректный email', 'error');
+        return false;
+    }
+    
+    if (!password) {
+        showNotification('Введите пароль', 'error');
+        return false;
+    }
+    
+    return true;
+}
+
+async function sendVerificationCode() {
+    const email = document.getElementById('regEmail').value.trim();
+    
+    // Валидация email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email) {
+        showNotification('Введите email', 'error');
+        return;
+    }
+    if (!emailRegex.test(email)) {
         showNotification('Введите корректный email', 'error');
         return;
     }
@@ -69,19 +297,23 @@ async function sendVerificationCode() {
             showNotification('Код подтверждения отправлен на email', 'success');
             
             // Показываем скрытые поля
-            document.getElementById('codeGroup').style.display = 'block';
-            document.getElementById('passwordGroup').style.display = 'block';
-            document.getElementById('confirmGroup').style.display = 'block';
-            document.getElementById('formOptions').style.display = 'block';
-            document.getElementById('authDivider').style.display = 'block';
-            document.getElementById('socialAuth').style.display = 'block';
-            document.getElementById('registerBtn').style.display = 'block';
+            const codeGroup = document.getElementById('codeGroup');
+            const passwordGroup = document.getElementById('passwordGroup');
+            const confirmGroup = document.getElementById('confirmGroup');
+            const formOptions = document.getElementById('formOptions');
+            const registerBtn = document.getElementById('registerBtn');
+            
+            if (codeGroup) codeGroup.style.display = 'block';
+            if (passwordGroup) passwordGroup.style.display = 'block';
+            if (confirmGroup) confirmGroup.style.display = 'block';
+            if (formOptions) formOptions.style.display = 'block';
+            if (registerBtn) registerBtn.style.display = 'block';
             
             // Меняем текст кнопки
             sendCodeBtn.style.display = 'none';
             
             // Запускаем таймер
-            startTimer(600); // 10 минут = 600 секунд
+            startTimer(600);
         } else {
             showNotification(data.message || 'Ошибка отправки кода', 'error');
         }
@@ -112,11 +344,9 @@ function startTimer(seconds) {
             clearInterval(verificationTimer);
             timerElement.innerHTML = '<span style="color: #ef4444;">Код истёк. Запросите новый.</span>';
             
-            // Блокируем регистрацию
             const registerBtn = document.getElementById('registerBtn');
             if (registerBtn) registerBtn.disabled = true;
             
-            // Показываем кнопку повторной отправки
             const sendCodeBtn = document.getElementById('sendCodeBtn');
             sendCodeBtn.style.display = 'block';
             sendCodeBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Отправить код снова';
@@ -128,38 +358,15 @@ function startTimer(seconds) {
 async function handleRegister(e) {
     e.preventDefault();
     
-    const firstName = document.getElementById('firstName')?.value;
-    const lastName = document.getElementById('lastName')?.value;
-    const email = document.getElementById('regEmail')?.value;
+    if (!validateRegistrationForm()) {
+        return;
+    }
+    
+    const firstName = document.getElementById('firstName')?.value.trim();
+    const lastName = document.getElementById('lastName')?.value.trim();
+    const email = document.getElementById('regEmail')?.value.trim();
     const password = document.getElementById('regPassword')?.value;
-    const confirmPassword = document.getElementById('confirmPassword')?.value;
-    const code = document.getElementById('verificationCode')?.value;
-    const agreeTerms = document.getElementById('agreeTerms')?.checked;
-    
-    if (!firstName || !lastName) {
-        showNotification('Введите имя и фамилию', 'error');
-        return;
-    }
-    
-    if (password !== confirmPassword) {
-        showNotification('Пароли не совпадают!', 'error');
-        return;
-    }
-    
-    if (password.length < 6) {
-        showNotification('Пароль должен быть не менее 6 символов', 'error');
-        return;
-    }
-    
-    if (!code) {
-        showNotification('Введите код подтверждения', 'error');
-        return;
-    }
-    
-    if (!agreeTerms) {
-        showNotification('Примите условия использования', 'error');
-        return;
-    }
+    const code = document.getElementById('verificationCode')?.value.trim();
     
     const submitBtn = document.getElementById('registerBtn');
     const originalText = submitBtn.innerHTML;
@@ -186,7 +393,6 @@ async function handleRegister(e) {
         const data = await response.json();
         
         if (response.ok && data.success) {
-            // Сохраняем данные пользователя
             localStorage.setItem('authToken', data.token);
             localStorage.setItem('userId', data.user_id);
             localStorage.setItem('userFirstName', data.first_name);
@@ -212,7 +418,11 @@ async function handleRegister(e) {
 async function handleLogin(e) {
     e.preventDefault();
     
-    const email = document.getElementById('email')?.value;
+    if (!validateLoginForm()) {
+        return;
+    }
+    
+    const email = document.getElementById('email')?.value.trim();
     const password = document.getElementById('password')?.value;
     const submitBtn = e.target.querySelector('button[type="submit"]');
     const originalText = submitBtn.innerHTML;
@@ -296,6 +506,22 @@ function checkPasswordStrength() {
     strengthBar.style.backgroundColor = color;
     strengthText.textContent = 'Надёжность пароля: ' + text;
     strengthText.style.color = color;
+    
+    // Валидация пароля в реальном времени
+    const passwordError = document.getElementById('passwordError');
+    if (passwordError) {
+        if (password.length > 0 && password.length < 6) {
+            passwordError.textContent = 'Пароль должен быть не менее 6 символов';
+            passwordError.style.display = 'block';
+            document.getElementById('regPassword').style.borderColor = '#ef4444';
+        } else if (password.length >= 6) {
+            passwordError.style.display = 'none';
+            document.getElementById('regPassword').style.borderColor = '#10b981';
+        }
+    }
+    
+    // Проверяем совпадение паролей
+    validatePasswordMatch();
 }
 
 async function updateAuthUI(token, userId) {
@@ -411,7 +637,7 @@ function showNotification(message, type = 'info') {
     }, 4000);
 }
 
-// Добавляем стили
+// Добавляем стили для ошибок валидации
 const style = document.createElement('style');
 style.textContent = `
     @keyframes slideIn {
@@ -435,6 +661,21 @@ style.textContent = `
         display: flex;
         align-items: center;
         gap: 0.5rem;
+    }
+    
+    .field-error {
+        color: #ef4444;
+        font-size: 12px;
+        margin-top: 5px;
+        display: none;
+    }
+    
+    input.error {
+        border-color: #ef4444 !important;
+    }
+    
+    input.valid {
+        border-color: #10b981 !important;
     }
 `;
 document.head.appendChild(style);

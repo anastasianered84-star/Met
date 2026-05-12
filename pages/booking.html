@@ -5,27 +5,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Мои бронирования - MetaBook</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-     <link rel="stylesheet" href="../style/styles.css">
+    <link rel="stylesheet" href="../style/styles.css">
     <link rel="stylesheet" href="../style/booking.css">
 </head>
 <body>
     <!-- Header -->
     <header>
         <div class="header-container">
-          <div class="logo">
-                <img src="../images/logo.png" p="MetaBook Logo" class="logo-image">
+            <div class="logo">
+                <img src="../images/logo.png" alt="MetaBook Logo" class="logo-image">
             </div>
             <nav>
                 <ul>
                     <li><a href="../index.html">Главная</a></li>
                     <li><a href="catalog.html">Каталог</a></li>
                     <li><a href="booking.html" class="active">Мои бронирования</a></li>
-                    
                 </ul>
             </nav>
             <div class="user-actions">
-                <button class="btn btn-outline"><i class="fa-solid fa-user"></i> Профиль</button>
-                <button class="btn btn-primary" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Выйти</button>
+                <button class="btn btn-outline" onclick="location.href='profile.html'">
+                    <i class="fa-solid fa-user"></i> Профиль
+                </button>
+                <button class="btn btn-primary" onclick="logout()">
+                    <i class="fa-solid fa-right-from-bracket"></i> Выйти
+                </button>
             </div>
         </div>
     </header>
@@ -46,35 +49,35 @@
             <!-- Statistics -->
             <div class="booking-stats">
                 <div class="stat-card">
-    <div class="stat-icon"><i class="fa-solid fa-clock"></i></div>
-    <div class="stat-info"><h3 id="statActive">—</h3><p>Активных броней</p></div>
-</div>
-<div class="stat-card">
-    <div class="stat-icon"><i class="fa-solid fa-calendar-check"></i></div>
-    <div class="stat-info"><h3 id="statUpcoming">—</h3><p>Предстоящих</p></div>
-</div>
-<div class="stat-card">
-    <div class="stat-icon"><i class="fa-solid fa-check-circle"></i></div>
-    <div class="stat-info"><h3 id="statCompleted">—</h3><p>Завершенных</p></div>
-</div>
-<div class="stat-card">
-    <div class="stat-icon"><i class="fa-solid fa-times-circle"></i></div>
-    <div class="stat-info"><h3 id="statCancelled">—</h3><p>Отмененных</p></div>
-</div>
+                    <div class="stat-icon"><i class="fa-solid fa-clock"></i></div>
+                    <div class="stat-info"><h3 id="statActive">—</h3><p>Активных броней</p></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fa-solid fa-calendar-check"></i></div>
+                    <div class="stat-info"><h3 id="statUpcoming">—</h3><p>Предстоящих</p></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fa-solid fa-check-circle"></i></div>
+                    <div class="stat-info"><h3 id="statCompleted">—</h3><p>Завершенных</p></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fa-solid fa-times-circle"></i></div>
+                    <div class="stat-info"><h3 id="statCancelled">—</h3><p>Отмененных</p></div>
+                </div>
             </div>
 
             <!-- Bookings List -->
             <div class="bookings-list">
-    <div class="tab-content active" id="active-tab">
-        <div style="text-align: center; padding: 3rem; color: rgba(255,255,255,0.5);">
-            <i class="fa-solid fa-spinner fa-spin" style="font-size: 2rem; margin-bottom: 1rem; display: block;"></i>
-            Загрузка...
-        </div>
-    </div>
-    <div class="tab-content" id="upcoming-tab"></div>
-    <div class="tab-content" id="completed-tab"></div>
-    <div class="tab-content" id="cancelled-tab"></div>
-</div>
+                <div class="tab-content active" id="active-tab">
+                    <div style="text-align: center; padding: 3rem; color: rgba(255,255,255,0.5);">
+                        <i class="fa-solid fa-spinner fa-spin" style="font-size: 2rem; margin-bottom: 1rem; display: block;"></i>
+                        Загрузка...
+                    </div>
+                </div>
+                <div class="tab-content" id="upcoming-tab"></div>
+                <div class="tab-content" id="completed-tab"></div>
+                <div class="tab-content" id="cancelled-tab"></div>
+            </div>
 
             <!-- Empty State -->
             <div class="empty-state" id="emptyState" style="display: none;">
@@ -95,36 +98,9 @@
         <div class="footer-container">
             <div class="footer-about">
                 <div class="logo">
-                <img src="../images/logo.png" p="MetaBook Logo" class="logo-image">
-            </div>
+                    <img src="../images/logo.png" alt="MetaBook Logo" class="logo-image">
+                </div>
                 <p>Портал для бронирования виртуальных комнат в метавселенной. Найдите идеальное пространство для вашего следующего VR-опыта.</p>
-            </div>
-            <div class="footer-links">
-                <h3>Навигация</h3>
-                <ul>
-                    <li><a href="../index.html">Главная</a></li>
-                    <li><a href="room.html">Каталог комнат</a></li>
-                    <li><a href="booking.html">Мои бронирования</a></li>
-                    <li><a href="#">Создать комнату</a></li>
-                </ul>
-            </div>
-            <div class="footer-links">
-                <h3>Поддержка</h3>
-                <ul>
-                    <li><a href="#">Помощь</a></li>
-                    <li><a href="#">FAQ</a></li>
-                    <li><a href="#">Контакты</a></li>
-                    <li><a href="#">Условия использования</a></li>
-                </ul>
-            </div>
-            <div class="footer-links">
-                <h3>Социальные сети</h3>
-                <ul>
-                    <li><a href="#"><i class="fa-brands fa-vk"></i> VKontakte</a></li>
-                    <li><a href="#"><i class="fa-brands fa-telegram"></i> Telegram</a></li>
-                    <li><a href="#"><i class="fa-brands fa-youtube"></i> YouTube</a></li>
-                    <li><a href="#"><i class="fa-brands fa-discord"></i> Discord</a></li>
-                </ul>
             </div>
         </div>
         <div class="copyright">
@@ -135,7 +111,6 @@
     <script src="script/booking-script.js"></script>
     <script src="script/auth-check.js"></script>
 </body>
-
 <script src="script/auth.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', async function() {
