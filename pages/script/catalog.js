@@ -32,7 +32,7 @@ function showNotification(message, type) {
     setTimeout(() => notification.remove(), 3000);
 }
 
-// ========== ГЛАВНОЕ — ПЕРЕХОД НА СТРАНИЦУ БРОНИРОВАНИЯ ==========
+// ========== ПЕРЕХОД НА СТРАНИЦУ БРОНИРОВАНИЯ ==========
 function openBookingModal(roomName, maxParticipants, roomId, pricePerHour) {
     if (!isAuthenticated()) {
         showNotification('Необходимо войти в систему для бронирования', 'error');
@@ -41,7 +41,6 @@ function openBookingModal(roomName, maxParticipants, roomId, pricePerHour) {
         }, 1500);
         return;
     }
-    // Здесь ВЕСЬ функционал бронирования — на отдельной странице
     window.location.href = `booking-room.html?id=${roomId}`;
 }
 
@@ -58,12 +57,25 @@ async function loadRooms() {
         }
     } catch (error) {
         console.error('Error:', error);
+        showNotification('Ошибка загрузки комнат', 'error');
     }
 }
 
 function displayRooms(rooms) {
     const container = document.getElementById('roomsContainer');
     if (!container) return;
+    
+    if (rooms.length === 0) {
+        container.innerHTML = `
+            <div class="no-results">
+                <i class="fa-solid fa-search"></i>
+                <h3>Комнаты не найдены</h3>
+                <p>Попробуйте изменить параметры фильтрации</p>
+            </div>
+        `;
+        return;
+    }
+    
     container.innerHTML = rooms.map(room => `
         <div class="room-card" data-room-id="${room.id}">
             <div class="room-image">
@@ -128,6 +140,7 @@ function loadFavorites() {
         }
     });
 }
+
 async function processPayment(bookingId, amount, roomName) {
     try {
         const response = await fetch(`${API_BASE_URL}/Payment/create`, {
@@ -146,13 +159,8 @@ async function processPayment(bookingId, amount, roomName) {
         const data = await response.json();
         
         if (data.success && data.paymentUrl) {
-            // Открываем оплату в новом окне
             window.open(data.paymentUrl, '_blank');
-            
-            // Показываем сообщение
             alert('✅ Бронирование создано! Оплатите в открывшемся окне.\nПосле оплаты вернитесь в личный кабинет.');
-            
-            // Переходим в список бронирований
             window.location.href = 'booking.html';
         } else {
             alert('❌ Ошибка: ' + (data.message || 'Не удалось создать платёж'));
@@ -162,9 +170,142 @@ async function processPayment(bookingId, amount, roomName) {
         alert('❌ Ошибка при создании платежа');
     }
 }
+
 function updateResultsCount(count) {
     const el = document.querySelector('.results-count');
     if (el) el.textContent = `Найдено: ${count} комнат`;
 }
 
-document.addEventListener('DOMContentLoaded', loadRooms);
+// ========== ФИЛЬТРАЦИЯ ==========
+function filterRooms() {
+    let filteredRooms = [...allRooms];
+    
+    // Фильтр по цене
+    const priceRange = document.getElementById('priceRange');
+    if (priceRange) {
+        const maxPrice = parseInt(priceRange.value);
+        filteredRooms = filteredRooms.filter(room => room.price_per_hour <= maxPrice);
+    }
+    
+    // Фильтр по вместимости
+    const activeCapacity = document.querySelector('.capacity-option.active');
+    if (activeCapacity) {
+        const capacityText = activeCapacity.textContent;
+        if (capacityText.includes('до 4')) {
+            filteredRooms = filteredRooms.filter(room => room.max_capacity <= 4);
+        } else if (capacityText.includes('5-10')) {
+            filteredRooms = filteredRooms.filter(room => room.max_capacity >= 5 && room.max_capacity <= 10);
+        } else if (capacityText.includes('10+')) {
+            filteredRooms = filteredRooms.filter(room => room.max_capacity > 10);
+        }
+        // "Все" — не фильтруем
+    }
+    
+    // ========== ПОИСК ПО НАЗВАНИЮ И ОПИСАНИЮ ==========
+    const searchInput = document.querySelector('.search-box input');
+    if (searchInput && searchInput.value) {
+        const searchTerm = searchInput.value.toLowerCase().trim();
+        filteredRooms = filteredRooms.filter(room => 
+            room.title.toLowerCase().includes(searchTerm) || 
+            (room.description && room.description.toLowerCase().includes(searchTerm))
+        );
+    }
+    // ================================================
+    
+    displayRooms(filteredRooms);
+    updateResultsCount(filteredRooms.length);
+}
+
+function resetFilters() {
+    // Сброс цены
+    const priceRange = document.getElementById('priceRange');
+    if (priceRange) {
+        priceRange.value = 1000;
+        document.getElementById('priceValue').textContent = '1000₽';
+    }
+    
+    // Сброс вместимости
+    document.querySelectorAll('.capacity-option').forEach(option => {
+        if (option.textContent.includes('5-10')) {
+            option.classList.add('active');
+        } else {
+            option.classList.remove('active');
+        }
+    });
+    
+    // Сброс поиска
+    const searchInput = document.querySelector('.search-box input');
+    if (searchInput) {
+        searchInput.value = '';
+    }
+    
+    displayRooms(allRooms);
+    updateResultsCount(allRooms.length);
+}
+
+// ========== ИНИЦИАЛИЗАЦИЯ ==========
+document.addEventListener('DOMContentLoaded', function() {
+    loadRooms();
+    
+    // Фильтр по цене
+    const priceRange = document.getElementById('priceRange');
+    if (priceRange) {
+        const priceValue = document.getElementById('priceValue');
+        priceRange.addEventListener('input', function() {
+            priceValue.textContent = this.value + '₽';
+            filterRooms();
+        });
+    }
+    
+    // Фильтр по вместимости
+    const capacityOptions = document.querySelectorAll('.capacity-option');
+    capacityOptions.forEach(option => {
+        option.addEventListener('click', function() {
+            capacityOptions.forEach(o => o.classList.remove('active'));
+            this.classList.add('active');
+            filterRooms();
+        });
+    });
+    
+    // Кнопка сброса фильтров
+    const filterReset = document.querySelector('.filter-reset');
+    if (filterReset) {
+        filterReset.addEventListener('click', resetFilters);
+    }
+    
+    // ========== ПОИСК ==========
+    const searchInput = document.querySelector('.search-box input');
+    const searchButton = document.querySelector('.search-box button');
+    
+    if (searchInput) {
+        searchInput.addEventListener('keyup', function(e) {
+            filterRooms(); // фильтруем при каждом вводе
+        });
+    }
+    
+    if (searchButton) {
+        searchButton.addEventListener('click', function() {
+            filterRooms();
+        });
+    }
+    // ==========================
+    
+    // Переключение вида (сетка/список)
+    const gridViewBtn = document.getElementById('gridView');
+    const listViewBtn = document.getElementById('listView');
+    const roomsContainer = document.getElementById('roomsContainer');
+    
+    if (gridViewBtn && listViewBtn && roomsContainer) {
+        gridViewBtn.addEventListener('click', function() {
+            roomsContainer.classList.remove('list-view');
+            gridViewBtn.classList.add('active');
+            listViewBtn.classList.remove('active');
+        });
+        
+        listViewBtn.addEventListener('click', function() {
+            roomsContainer.classList.add('list-view');
+            listViewBtn.classList.add('active');
+            gridViewBtn.classList.remove('active');
+        });
+    }
+});
