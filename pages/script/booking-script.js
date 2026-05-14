@@ -252,6 +252,7 @@ function createBookingCard(booking, status) {
             `;
         }
     }
+    
 
     const startDateStr = startTime.toLocaleDateString('ru-RU', {
         day: 'numeric',
@@ -313,6 +314,11 @@ function escapeHtml(str) {
 }
 
 function getBookingActions(booking, status, isCurrentlyActive = false) {
+    // Получаем текущего пользователя
+    const currentUserId = parseInt(localStorage.getItem('userId'));
+    // Проверяем, является ли текущий пользователь владельцем бронирования
+    const isOwner = booking.user_id === currentUserId;
+    
     switch (status) {
         case 'active':
             if (isCurrentlyActive) {
@@ -323,24 +329,34 @@ function getBookingActions(booking, status, isCurrentlyActive = false) {
                     </a>
                 `;
             } else {
-                // Активная по статусу, но ещё не началась (по факту предстоящая) — только "Отменить"
+                // Активная по статусу, но ещё не началась (по факту предстоящая)
                 return `
                     <button class="btn btn-outline" onclick="cancelBooking(${booking.id})">
                         <i class="fa-solid fa-times"></i> Отменить
                     </button>
+                    ${isOwner ? `
+                        <button class="btn btn-primary" onclick="showInviteModalForBooking(${booking.id}, ${booking.room_id})">
+                            <i class="fa-solid fa-user-plus"></i> Пригласить
+                        </button>
+                    ` : ''}
                 `;
             }
         case 'upcoming':
-            // Предстоящие — только "Отменить"
-            return `
-                <button class="btn btn-outline" onclick="cancelBooking(${booking.id})">
-                    <i class="fa-solid fa-times"></i> Отменить
-                </button>
+            // Предстоящие — показываем кнопку "Пригласить" для создателя
+           return `
+        <button class="btn btn-outline" onclick="cancelBooking(${booking.id})">
+            <i class="fa-solid fa-times"></i> Отменить
+        </button>
+        <button class="btn btn-primary" onclick="showInviteModalForBooking(${booking.id}, ${booking.room_id})">
+            <i class="fa-solid fa-user-plus"></i> Пригласить
+        </button>
+    `;
+                ` : ''}
             `;
         case 'completed':
         case 'cancelled':
-            // Завершённые и отменённые — без кнопок (или можно "Удалить из истории")
-            return ``; // Пусто — нет кнопок
+            // Завершённые и отменённые — без кнопок
+            return ``;
         default:
             return '';
     }
@@ -559,4 +575,417 @@ style.textContent = `
         border-color: rgba(255, 255, 255, 0.3);
     }
 `;
+// ========== ПРИГЛАШЕНИЕ УЧАСТНИКОВ В ПРЕДСТОЯЩИЕ БРОНИРОВАНИЯ ==========
+
+// Переменные для хранения контекста приглашения
+let pendingInviteBookingId = null;
+let pendingInviteRoomId = null;
+
+// Показывает модальное окно для приглашения участников в предстоящую бронь
+function showInviteModalForBooking(bookingId, roomId) {
+    pendingInviteBookingId = bookingId;
+    pendingInviteRoomId = roomId;
+    
+    let modal = document.getElementById('inviteModal');
+    if (!modal) {
+        createInviteModal();
+        modal = document.getElementById('inviteModal');
+    }
+    
+    if (modal) {
+        modal.style.display = 'flex';
+        // Очищаем поиск
+        const searchInput = modal.querySelector('.search-input');
+        if (searchInput) searchInput.value = '';
+        const searchResults = modal.querySelector('.search-results');
+        if (searchResults) searchResults.innerHTML = '';
+        // Показываем сразу поиск (без выбора метода)
+        document.querySelectorAll('.invite-method').forEach(el => el.style.display = 'none');
+        const searchMethod = document.getElementById('searchMethod');
+        if (searchMethod) searchMethod.style.display = 'block';
+        const inviteOptions = document.querySelector('.invite-options');
+        if (inviteOptions) inviteOptions.style.display = 'none';
+        const backButton = document.getElementById('backButton');
+        if (backButton) backButton.style.display = 'block';
+    }
+}
+
+function createInviteModal() {
+    const modalHtml = `
+        <div class="modal" id="inviteModal">
+            <div class="modal-content">
+                <button class="close-modal" onclick="closeModal('inviteModal')">&times;</button>
+                <h2 class="modal-title">Пригласить в комнату</h2>
+                
+                <div class="invite-method" id="searchMethod">
+                    <h4>Поиск пользователей</h4>
+                    <div class="user-search">
+                        <input type="text" placeholder="Поиск по имени или email..." class="search-input" oninput="searchUsersForInvite(this.value)">
+                        <div class="search-results"></div>
+                    </div>
+                </div>
+                
+                <div class="modal-actions">
+                    <button class="btn btn-outline" onclick="backToInviteMethods()" id="backButton" style="display: none;">
+                        <i class="fa-solid fa-arrow-left"></i> Назад
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    // Добавляем стили если их нет
+    if (!document.querySelector('#invite-modal-styles')) {
+        const style = document.createElement('style');
+        style.id = 'invite-modal-styles';
+        style.textContent = `
+            .modal {
+                display: none;
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0,0,0,0.8);
+                justify-content: center;
+                align-items: center;
+                z-index: 1000;
+            }
+            .modal-content {
+                background: #1f2937;
+                border-radius: 16px;
+                padding: 24px;
+                width: 90%;
+                max-width: 500px;
+                color: white;
+            }
+            .close-modal {
+                float: right;
+                background: none;
+                border: none;
+                color: white;
+                font-size: 24px;
+                cursor: pointer;
+            }
+            .modal-title {
+                margin-top: 0;
+                margin-bottom: 20px;
+            }
+            .search-input {
+                width: 100%;
+                padding: 10px;
+                border-radius: 8px;
+                border: 1px solid #4b5563;
+                background: #374151;
+                color: white;
+                margin-bottom: 16px;
+            }
+            .search-results {
+                max-height: 300px;
+                overflow-y: auto;
+            }
+            .search-result {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 12px;
+                background: #374151;
+                border-radius: 8px;
+                margin-bottom: 8px;
+            }
+            .search-result img {
+                width: 40px;
+                height: 40px;
+                border-radius: 50%;
+            }
+            .search-result-info {
+                flex: 1;
+            }
+            .search-result-name {
+                display: block;
+                font-weight: 500;
+            }
+            .search-result-status {
+                font-size: 12px;
+                color: #9ca3af;
+            }
+            .invite-btn {
+                padding: 6px 12px;
+                background: #10b981;
+                border: none;
+                border-radius: 6px;
+                color: white;
+                cursor: pointer;
+            }
+            .invite-btn:hover {
+                background: #059669;
+            }
+            .invite-btn:disabled {
+                background: #6b7280;
+                cursor: not-allowed;
+            }
+            .btn-outline {
+                background: transparent;
+                border: 1px solid #4b5563;
+                padding: 8px 16px;
+                border-radius: 8px;
+                color: white;
+                cursor: pointer;
+            }
+            .btn-outline:hover {
+                background: #374151;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+}
+
+function backToInviteMethods() {
+    closeModal('inviteModal');
+}
+
+// Обновленная функция поиска для booking
+async function searchUsersForInvite(query) {
+    const token = localStorage.getItem('authToken');
+    const roomId = pendingInviteRoomId;
+    
+    if (!roomId) return;
+    
+    if (query.length < 2) {
+        const container = document.querySelector('.search-results');
+        if (container) container.innerHTML = '';
+        return;
+    }
+
+    try {
+        const res = await fetch(
+            `${API_BASE_URL}/Room/${roomId}/search-users?query=${encodeURIComponent(query)}`,
+            { headers: { 'Authorization': `Bearer ${token}` } }
+        );
+        const data = await res.json();
+
+        const container = document.querySelector('.search-results');
+        if (!container) return;
+
+        if (!data.success || !data.users || !data.users.length) {
+            container.innerHTML = `<p style="color:#9ca3af; padding:0.5rem;">Пользователи не найдены</p>`;
+            return;
+        }
+
+        container.innerHTML = data.users.map(u => {
+            const alreadyThere = u.is_already_in_room;
+            const label = alreadyThere ? 'В комнате' : 'Пригласить';
+            return `
+                <div class="search-result">
+                    <img src="../images/iconprofile.png" alt="User">
+                    <div class="search-result-info">
+                        <span class="search-result-name">${escapeHtml(u.first_name)} ${escapeHtml(u.last_name)}</span>
+                        <span class="search-result-status">${escapeHtml(u.email)}</span>
+                    </div>
+                    <button class="invite-btn" onclick="inviteUserToBooking(${u.user_id})" ${alreadyThere ? 'disabled style="opacity:0.5"' : ''}>
+                        ${label}
+                    </button>
+                </div>
+            `;
+        }).join('');
+    } catch (e) {
+        console.error('Ошибка поиска пользователей:', e);
+    }
+}
+
+
+async function inviteUserToBooking(invitedUserId) {
+    const token = localStorage.getItem('authToken');
+    const roomId = pendingInviteRoomId;
+    const bookingId = pendingInviteBookingId;
+    
+    if (!roomId) {
+        showNotification('Ошибка: комната не определена', 'error');
+        return;
+    }
+
+    try {
+        const formData = new FormData();
+        formData.append('roomId', roomId);
+        formData.append('invitedUserId', invitedUserId);
+        if (bookingId) {
+            formData.append('bookingId', bookingId);
+        }
+
+        const res = await fetch(`${API_BASE_URL}/Room/invite`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` },
+            body: formData
+        });
+        const data = await res.json();
+
+        if (data.success) {
+            showNotification(data.message, 'success');
+            closeModal('inviteModal');
+            await loadUserBookings(); // обновляем список
+        } else {
+            showNotification(data.message || 'Ошибка при приглашении', 'error');
+        }
+    } catch (e) {
+        console.error('Invite error:', e);
+        showNotification('Ошибка при приглашении', 'error');
+    }
+}
+
+
+// Закрытие модального окна
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.style.display = 'none';
+    }
+    // Сбрасываем контекст
+    pendingInviteBookingId = null;
+    pendingInviteRoomId = null;
+}
+
+// Показывает выбранный метод приглашения
+function showInviteMethod(method) {
+    document.querySelectorAll('.invite-method').forEach(el => {
+        el.style.display = 'none';
+    });
+    const inviteOptions = document.querySelector('.invite-options');
+    if (inviteOptions) inviteOptions.style.display = 'none';
+    
+    const methodElement = document.getElementById(method + 'Method');
+    if (methodElement) methodElement.style.display = 'block';
+    
+    const backButton = document.getElementById('backButton');
+    if (backButton) backButton.style.display = 'block';
+    
+    if (method === 'link') {
+        updateInviteLink();
+    }
+}
+
+// Возврат к списку методов приглашения
+function backToInviteMethods() {
+    document.querySelectorAll('.invite-method').forEach(el => {
+        el.style.display = 'none';
+    });
+    const inviteOptions = document.querySelector('.invite-options');
+    if (inviteOptions) inviteOptions.style.display = 'grid';
+    
+    const backButton = document.getElementById('backButton');
+    if (backButton) backButton.style.display = 'none';
+}
+
+// Обновление ссылки для приглашения
+function updateInviteLink() {
+    const linkInput = document.getElementById('inviteLink');
+    if (linkInput && pendingInviteRoomId) {
+        const inviteUrl = `${window.location.origin}${window.location.pathname.replace('booking.html', 'room.html')}?id=${pendingInviteRoomId}&invite=1`;
+        linkInput.value = inviteUrl;
+    }
+}
+
+// Копирование ссылки
+function copyInviteLink() {
+    const input = document.getElementById('inviteLink');
+    if (input) {
+        input.select();
+        document.execCommand('copy');
+        showNotification('Ссылка скопирована!', 'success');
+    }
+}
+
+// Поиск пользователей для приглашения
+async function searchUsersForInvite(query) {
+    const token = localStorage.getItem('authToken');
+    const roomId = pendingInviteRoomId;
+    
+    if (!roomId) {
+        console.error('No room ID for invite');
+        return;
+    }
+    
+    if (query.length < 2) {
+        const container = document.querySelector('.search-results');
+        if (container) container.innerHTML = '';
+        return;
+    }
+
+    try {
+        const res = await fetch(
+            `${API_BASE_URL}/Room/${roomId}/search-users?query=${encodeURIComponent(query)}`,
+            { headers: { 'Authorization': `Bearer ${token}` } }
+        );
+        const data = await res.json();
+
+        const container = document.querySelector('.search-results');
+        if (!container) return;
+
+        if (!data.success || !data.users || !data.users.length) {
+            container.innerHTML = `<p style="color:rgba(255,255,255,0.5); padding:0.5rem;">Пользователи не найдены</p>`;
+            return;
+        }
+
+        container.innerHTML = data.users.map(u => {
+            const alreadyThere = u.is_already_in_room;
+            const label = alreadyThere ? 'В комнате' : 'Пригласить';
+            return `
+                <div class="search-result">
+                    <img src="../images/iconprofile.png" alt="User">
+                    <div class="search-result-info">
+                        <span class="search-result-name">${escapeHtml(u.first_name)} ${escapeHtml(u.last_name)}</span>
+                        <span class="search-result-status">${escapeHtml(u.email)}</span>
+                    </div>
+                    <button class="invite-btn" onclick="inviteUserToBooking(${u.user_id})" ${alreadyThere ? 'disabled style="opacity:0.5"' : ''}>
+                        ${label}
+                    </button>
+                </div>
+            `;
+        }).join('');
+    } catch (e) {
+        console.error('Ошибка поиска пользователей:', e);
+    }
+}
+
+// Приглашение пользователя в предстоящую бронь
+async function inviteUserToBooking(invitedUserId) {
+    const token = localStorage.getItem('authToken');
+    const roomId = pendingInviteRoomId;
+    const bookingId = pendingInviteBookingId;
+    
+    if (!roomId) {
+        showNotification('Ошибка: комната не определена', 'error');
+        return;
+    }
+
+    try {
+        const formData = new FormData();
+        formData.append('roomId', roomId);
+        formData.append('invitedUserId', invitedUserId);
+        if (bookingId) {
+            formData.append('bookingId', bookingId);
+        }
+
+        const res = await fetch(`${API_BASE_URL}/Room/invite`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` },
+            body: formData
+        });
+        const data = await res.json();
+
+        if (data.success) {
+            showNotification(data.message, 'success');
+            // Обновляем список бронирований
+            await loadUserBookings();
+            // Закрываем модальное окно
+            closeModal('inviteModal');
+        } else {
+            showNotification(data.message || 'Ошибка при приглашении', 'error');
+        }
+    } catch (e) {
+        console.error('Invite error:', e);
+        showNotification('Ошибка при приглашении', 'error');
+    }
+}
+
 document.head.appendChild(style);

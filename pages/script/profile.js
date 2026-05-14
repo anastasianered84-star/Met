@@ -387,7 +387,6 @@ async function saveProfile() {
     }
     
     try {
-        // Пробуем обновить через API (если нет такого эндпоинта, обновляем локально)
         const formData = new FormData();
         formData.append('firstName', firstName);
         formData.append('lastName', lastName);
@@ -404,14 +403,12 @@ async function saveProfile() {
         if (response.ok) {
             const data = await response.json();
             if (data.success) {
-                // Обновляем отображение
                 document.getElementById('displayFirstName').textContent = firstName;
                 document.getElementById('displayLastName').textContent = lastName;
                 document.getElementById('displayEmail').textContent = email;
                 document.getElementById('userName').textContent = `${firstName} ${lastName}`;
                 document.getElementById('userEmail').textContent = email;
-                
-                // Сохраняем в localStorage
+            
                 localStorage.setItem('userFirstName', firstName);
                 localStorage.setItem('userLastName', lastName);
                 localStorage.setItem('userEmail', email);
@@ -422,7 +419,6 @@ async function saveProfile() {
                 showNotification(data.message || 'Ошибка при обновлении', 'error');
             }
         } else {
-            // Если API нет, обновляем только локально
             document.getElementById('displayFirstName').textContent = firstName;
             document.getElementById('displayLastName').textContent = lastName;
             document.getElementById('displayEmail').textContent = email;
@@ -438,7 +434,6 @@ async function saveProfile() {
         }
     } catch (error) {
         console.error('Update error:', error);
-        // Если API недоступен, обновляем локально
         document.getElementById('displayFirstName').textContent = firstName;
         document.getElementById('displayLastName').textContent = lastName;
         document.getElementById('displayEmail').textContent = email;
@@ -454,7 +449,6 @@ async function saveProfile() {
     }
 }
 
-// Смена пароля
 async function changePassword() {
     const token = localStorage.getItem('authToken');
     
@@ -494,8 +488,6 @@ async function changePassword() {
         
         if (data.success) {
             showNotification('Пароль успешно изменен', 'success');
-            
-            // Очищаем поля
             document.getElementById('currentPassword').value = '';
             document.getElementById('newPassword').value = '';
             document.getElementById('confirmPassword').value = '';

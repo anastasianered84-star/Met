@@ -129,7 +129,6 @@ async function initSignalR() {
     }
 }
 
-// ========== ОБНОВЛЕНИЕ ИНФОРМАЦИИ О КОМНАТЕ ==========
 async function refreshRoomInfo() {
     const token = localStorage.getItem('authToken');
     if (!currentRoomId || !token) return;

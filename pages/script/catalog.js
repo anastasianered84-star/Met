@@ -179,15 +179,11 @@ function updateResultsCount(count) {
 // ========== ФИЛЬТРАЦИЯ ==========
 function filterRooms() {
     let filteredRooms = [...allRooms];
-    
-    // Фильтр по цене
     const priceRange = document.getElementById('priceRange');
     if (priceRange) {
         const maxPrice = parseInt(priceRange.value);
         filteredRooms = filteredRooms.filter(room => room.price_per_hour <= maxPrice);
     }
-    
-    // Фильтр по вместимости
     const activeCapacity = document.querySelector('.capacity-option.active');
     if (activeCapacity) {
         const capacityText = activeCapacity.textContent;
@@ -198,10 +194,7 @@ function filterRooms() {
         } else if (capacityText.includes('10+')) {
             filteredRooms = filteredRooms.filter(room => room.max_capacity > 10);
         }
-        // "Все" — не фильтруем
     }
-    
-    // ========== ПОИСК ПО НАЗВАНИЮ И ОПИСАНИЮ ==========
     const searchInput = document.querySelector('.search-box input');
     if (searchInput && searchInput.value) {
         const searchTerm = searchInput.value.toLowerCase().trim();
@@ -209,12 +202,12 @@ function filterRooms() {
             room.title.toLowerCase().includes(searchTerm) || 
             (room.description && room.description.toLowerCase().includes(searchTerm))
         );
-    }
-    // ================================================
-    
+    }   
     displayRooms(filteredRooms);
     updateResultsCount(filteredRooms.length);
 }
+
+
 
 function resetFilters() {
     // Сброс цены
