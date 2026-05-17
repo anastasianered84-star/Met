@@ -328,6 +328,8 @@ function getBookingActions(booking, status, isCurrentlyActive = false) {
                         <i class="fa-solid fa-play"></i> Подключиться
                     </a>
                 `;
+
+
             } else {
                 // Активная по статусу, но ещё не началась (по факту предстоящая)
                 return `
@@ -403,13 +405,14 @@ async function cancelBooking(bookingId) {
     try {
         showNotification('Отмена бронирования...', 'info');
         
+        // Исправлено: отправляем объект с полем BookingId (как ожидает бэкенд)
         const response = await fetch(`${API_BASE_URL}/Payment/refund`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
             },
-            body: JSON.stringify({ bookingId: bookingId })
+            body: JSON.stringify({ BookingId: bookingId })  // ← BookingId с большой буквы
         });
 
         const data = await response.json();
@@ -749,6 +752,7 @@ function backToInviteMethods() {
 async function searchUsersForInvite(query) {
     const token = localStorage.getItem('authToken');
     const roomId = pendingInviteRoomId;
+    const bookingId = pendingInviteBookingId;  // ← ДОБАВЬ ЭТУ СТРОКУ
     
     if (!roomId) return;
     
@@ -759,10 +763,13 @@ async function searchUsersForInvite(query) {
     }
 
     try {
-        const res = await fetch(
-            `${API_BASE_URL}/Room/${roomId}/search-users?query=${encodeURIComponent(query)}`,
-            { headers: { 'Authorization': `Bearer ${token}` } }
-        );
+        // ДОБАВЛЯЕМ bookingId В ЗАПРОС
+        const url = `${API_BASE_URL}/Room/${roomId}/search-users?query=${encodeURIComponent(query)}&bookingId=${bookingId}`;
+        console.log('Search URL:', url);  // Для отладки
+        
+        const res = await fetch(url, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
         const data = await res.json();
 
         const container = document.querySelector('.search-results');
@@ -775,7 +782,7 @@ async function searchUsersForInvite(query) {
 
         container.innerHTML = data.users.map(u => {
             const alreadyThere = u.is_already_in_room;
-            const label = alreadyThere ? 'В комнате' : 'Пригласить';
+            const label = alreadyThere ? '✅ Уже в комнате' : '➕ Пригласить';
             return `
                 <div class="search-result">
                     <img src="../images/iconprofile.png" alt="User">
@@ -793,7 +800,6 @@ async function searchUsersForInvite(query) {
         console.error('Ошибка поиска пользователей:', e);
     }
 }
-
 
 async function inviteUserToBooking(invitedUserId) {
     const token = localStorage.getItem('authToken');
@@ -896,56 +902,6 @@ function copyInviteLink() {
 }
 
 // Поиск пользователей для приглашения
-async function searchUsersForInvite(query) {
-    const token = localStorage.getItem('authToken');
-    const roomId = pendingInviteRoomId;
-    
-    if (!roomId) {
-        console.error('No room ID for invite');
-        return;
-    }
-    
-    if (query.length < 2) {
-        const container = document.querySelector('.search-results');
-        if (container) container.innerHTML = '';
-        return;
-    }
-
-    try {
-        const res = await fetch(
-            `${API_BASE_URL}/Room/${roomId}/search-users?query=${encodeURIComponent(query)}`,
-            { headers: { 'Authorization': `Bearer ${token}` } }
-        );
-        const data = await res.json();
-
-        const container = document.querySelector('.search-results');
-        if (!container) return;
-
-        if (!data.success || !data.users || !data.users.length) {
-            container.innerHTML = `<p style="color:rgba(255,255,255,0.5); padding:0.5rem;">Пользователи не найдены</p>`;
-            return;
-        }
-
-        container.innerHTML = data.users.map(u => {
-            const alreadyThere = u.is_already_in_room;
-            const label = alreadyThere ? 'В комнате' : 'Пригласить';
-            return `
-                <div class="search-result">
-                    <img src="../images/iconprofile.png" alt="User">
-                    <div class="search-result-info">
-                        <span class="search-result-name">${escapeHtml(u.first_name)} ${escapeHtml(u.last_name)}</span>
-                        <span class="search-result-status">${escapeHtml(u.email)}</span>
-                    </div>
-                    <button class="invite-btn" onclick="inviteUserToBooking(${u.user_id})" ${alreadyThere ? 'disabled style="opacity:0.5"' : ''}>
-                        ${label}
-                    </button>
-                </div>
-            `;
-        }).join('');
-    } catch (e) {
-        console.error('Ошибка поиска пользователей:', e);
-    }
-}
 
 // Приглашение пользователя в предстоящую бронь
 async function inviteUserToBooking(invitedUserId) {
