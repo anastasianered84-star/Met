@@ -129,7 +129,6 @@ function displayRooms(rooms) {
         <div class="room-card" data-room-id="${room.id}">
             <div class="room-image">
                 <img src="${getImageUrl(room.base_image_url)}" alt="${room.title}">
-                <div class="room-badge">${room.price_per_hour === 0 ? 'Бесплатно' : 'Популярное'}</div>
                 <button class="favorite-btn" onclick="toggleFavorite(${room.id})">
                     <i class="fa-regular fa-heart"></i>
                 </button>
@@ -281,8 +280,13 @@ function logout() {
     localStorage.removeItem('authToken');
     localStorage.removeItem('userId');
     localStorage.removeItem('userEmail');
+    localStorage.removeItem('userFirstName');
+    localStorage.removeItem('userLastName');
+    
     showNotification('Вы вышли из системы', 'info');
+    
+    // Просто перезагружаем страницу, а auth-check.js обновит кнопки
     setTimeout(() => {
-        window.location.reload();
+        window.location.href = '../index.html'; // Явно указываем путь к главной
     }, 1000);
 }

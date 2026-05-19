@@ -105,23 +105,37 @@ function renderCalendar(year, month) {
         daysContainer.appendChild(empty);
     }
     
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    // Получаем текущую дату в ЛОКАЛЬНОМ времени пользователя
+    const now = new Date();
+    const todayLocal = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     
     for (let d = 1; d <= lastDay.getDate(); d++) {
+        // Создаём дату в ЛОКАЛЬНОМ времени (без UTC)
         const cellDate = new Date(year, month-1, d);
-        const isPast = cellDate < today;
-        const dateKey = cellDate.toISOString().split('T')[0];
+        cellDate.setHours(0, 0, 0, 0);
+        
+        // Сравниваем ЛОКАЛЬНЫЕ даты
+        const isPast = cellDate < todayLocal;
+        
+        // Формируем ключ для bookedSlots (бэкенд уже вернул с учётом смещения)
+        const dateKey = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
         const dayBookings = bookedSlots[dateKey] || [];
         
         const dayCell = document.createElement('div');
         dayCell.className = 'calendar-day';
         
         if (isPast) {
-            dayCell.classList.add('booked');
+            dayCell.classList.add('past');
+            dayCell.style.background = 'rgba(239, 68, 68, 0.2)';
+            dayCell.style.borderColor = '#ef4444';
+            dayCell.style.cursor = 'not-allowed';
+            dayCell.title = 'Эта дата уже прошла';
         } else if (dayBookings.length === 0) {
             dayCell.classList.add('free');
+            dayCell.style.background = 'rgba(16, 185, 129, 0.2)';
+            dayCell.style.cursor = 'pointer';
         } else {
+            // Проверяем, все ли часы заняты
             const bookedHours = new Set();
             dayBookings.forEach(b => {
                 for (let h = b.startHour; h < b.endHour; h++) {
@@ -130,24 +144,39 @@ function renderCalendar(year, month) {
             });
             if (bookedHours.size >= 24) {
                 dayCell.classList.add('booked');
+                dayCell.style.background = 'rgba(239, 68, 68, 0.3)';
+                dayCell.style.cursor = 'not-allowed';
+                dayCell.title = 'Весь день занят';
             } else {
                 dayCell.classList.add('partial');
+                dayCell.style.background = 'rgba(245, 158, 11, 0.2)';
+                dayCell.style.cursor = 'pointer';
+                dayCell.title = `Свободно ${24 - bookedHours.size} часов`;
             }
         }
         
         dayCell.innerHTML = `<span class="day-number">${d}</span><div class="status-dot"></div>`;
-        dayCell.onclick = () => !isPast && onDateSelect(cellDate);
+        if (!isPast) {
+            dayCell.onclick = (function(date) {
+                return function() { onDateSelect(date); };
+            })(cellDate);
+        }
         daysContainer.appendChild(dayCell);
     }
 }
 
 async function onDateSelect(date) {
     selectedDate = date;
-    document.getElementById('selectedDateInfo').textContent = date.toLocaleDateString('ru-RU');
+    // Форматируем дату в ЛОКАЛЬНОМ времени
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    document.getElementById('selectedDateInfo').textContent = `${day}.${month}.${year}`;
     
     document.querySelectorAll('.calendar-day').forEach(cell => cell.classList.remove('selected'));
     if (event && event.target) {
-        event.target.classList.add('selected');
+        const targetCell = event.target.closest('.calendar-day');
+        if (targetCell) targetCell.classList.add('selected');
     }
     
     await loadAvailableHours(currentRoomId, date);
@@ -158,49 +187,72 @@ async function loadAvailableHours(roomId, date) {
         const year = date.getFullYear();
         const month = date.getMonth() + 1;
         const day = date.getDate();
-        const dateStr = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+        // Формируем дату в формате YYYY-MM-DD (локальная дата)
+        const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
         
-        // Смещение в минутах (отрицательное для UTC+), передаём на бэкенд
-        const tzOffset = new Date().getTimezoneOffset(); // для UTC+5 = -300
+        // Получаем смещение часового пояса пользователя в минутах
+        const tzOffset = new Date().getTimezoneOffset();
         
         const response = await fetch(`${API_BASE_URL}/Room/${roomId}/available-hours?date=${dateStr}&tzOffset=${tzOffset}`);
         const data = await response.json();
         
         if (data.success) {
-            displayTimeSlots(data.availableHours, data.bookedHours);
+            displayTimeSlots(data.availableHours, data.bookedHours, date);
         }
     } catch (error) {
         console.error('Error:', error);
     }
 }
 
-function displayTimeSlots(availableHours, bookedHours) {
+function displayTimeSlots(availableHours, bookedHours, selectedDateObj) {
     const container = document.getElementById('timeSlotsGrid');
     if (!container) return;
     
-    const allHours = [];
-    for (let hour = 0; hour < 24; hour++) {
-        allHours.push(hour);
-    }
+    // Получаем текущее время в ЛОКАЛЬНОМ часовом поясе
+    const now = new Date();
+    const isToday = selectedDateObj.getDate() === now.getDate() && 
+                    selectedDateObj.getMonth() === now.getMonth() && 
+                    selectedDateObj.getFullYear() === now.getFullYear();
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
     
     const bookedSet = new Set(bookedHours || []);
     
     container.innerHTML = '';
     
-    allHours.forEach(hour => {
+    for (let hour = 0; hour < 24; hour++) {
         const slot = document.createElement('div');
         slot.className = 'time-slot';
         
-        const startTimeStr = `${hour.toString().padStart(2, '0')}:00`;
-        const endTimeStr = `${(hour + 1).toString().padStart(2, '0')}:00`;
+        const startTimeStr = `${String(hour).padStart(2, '0')}:00`;
+        const endTimeStr = `${String(hour + 1).padStart(2, '0')}:00`;
         slot.textContent = `${startTimeStr} - ${endTimeStr}`;
         
-        if (bookedSet.has(hour)) {
-            slot.classList.add('booked-time');
-            slot.title = 'Это время уже занято';
+        // Проверка на прошедшее время (для сегодняшнего дня)
+        // Если час меньше текущего - точно прошёл
+        // Если час равен текущему, но текущие минуты >= 1 - тоже прошёл
+        let isPastHour = false;
+        if (isToday) {
+            if (hour < currentHour) {
+                isPastHour = true;
+            } else if (hour === currentHour && currentMinute > 0) {
+                isPastHour = true;
+            }
+        }
+        
+        if (isPastHour) {
+            slot.classList.add('past-time');
             slot.style.background = 'rgba(239, 68, 68, 0.3)';
             slot.style.borderColor = '#ef4444';
             slot.style.cursor = 'not-allowed';
+            slot.title = 'Это время уже прошло';
+            slot.onclick = null;
+        } else if (bookedSet.has(hour)) {
+            slot.classList.add('booked-time');
+            slot.style.background = 'rgba(239, 68, 68, 0.3)';
+            slot.style.borderColor = '#ef4444';
+            slot.style.cursor = 'not-allowed';
+            slot.title = 'Это время уже занято';
             slot.onclick = null;
         } else {
             slot.classList.add('available');
@@ -210,9 +262,8 @@ function displayTimeSlots(availableHours, bookedHours) {
         }
         
         container.appendChild(slot);
-    });
+    }
 }
-
 function onTimeSlotSelect(hour, slotElement) {
     document.querySelectorAll('.time-slot').forEach(s => s.classList.remove('selected-slot'));
     slotElement.classList.add('selected-slot');
@@ -256,41 +307,35 @@ async function handleBookingSubmit(e) {
     }
     
     const [year, month, day] = date.split('-');
-const [hour] = startTime.split(':');
-
-// Создаём дату в ЛОКАЛЬНОМ часовом поясе браузера
-const localStartDateTime = new Date(
-    parseInt(year),
-    parseInt(month) - 1,
-    parseInt(day),
-    parseInt(hour),
-    0,
-    0
-);
-
-// Проверка: нельзя бронировать в прошлом
-const now = new Date();
-if (localStartDateTime < now) {
-    showNotification('Нельзя забронировать время в прошлом', 'error');
-    return;
-}
-
-// Конец бронирования (от локального времени + duration часов)
-const localEndDateTime = new Date(localStartDateTime.getTime() + duration * 60 * 60 * 1000);
-
-// toISOString() автоматически конвертирует локальное время в UTC
-const startISO = localStartDateTime.toISOString();
-const endISO = localEndDateTime.toISOString();
-
-console.log('Локальное начало:', localStartDateTime.toLocaleString('ru-RU'));
-console.log('UTC для отправки:', startISO);
-
-const formData = new FormData();
-formData.append('roomId', currentRoomId);
-formData.append('userId', userId);
-formData.append('startTime', startISO);
-formData.append('endTime', endISO);
-formData.append('specialRequests', specialRequests);
+    const [hour] = startTime.split(':');
+    
+    // Создаём дату в ЛОКАЛЬНОМ часовом поясе
+    const localStartDateTime = new Date(
+        parseInt(year),
+        parseInt(month) - 1,
+        parseInt(day),
+        parseInt(hour),
+        0,
+        0
+    );
+    
+    // Проверка: нельзя бронировать в прошлом
+    const now = new Date();
+    if (localStartDateTime < now) {
+        showNotification('Нельзя забронировать время в прошлом', 'error');
+        return;
+    }
+    
+    const localEndDateTime = new Date(localStartDateTime.getTime() + duration * 60 * 60 * 1000);
+    const startISO = localStartDateTime.toISOString();
+    const endISO = localEndDateTime.toISOString();
+    
+    const formData = new FormData();
+    formData.append('roomId', currentRoomId);
+    formData.append('userId', userId);
+    formData.append('startTime', startISO);
+    formData.append('endTime', endISO);
+    formData.append('specialRequests', specialRequests);
     
     try {
         const response = await fetch(`${API_BASE_URL}/Room/book`, {
@@ -301,12 +346,9 @@ formData.append('specialRequests', specialRequests);
         const data = await response.json();
         
         if (data.success) {
-    // Рассчитываем общую стоимость
-    const totalPrice = duration * currentRoomPrice;
-    
-    // Вызываем оплату
-    await processPayment(data.booking_id, totalPrice, currentRoomName);
-} else {
+            const totalPrice = duration * currentRoomPrice;
+            await processPayment(data.booking_id, totalPrice, currentRoomName);
+        } else {
             showNotification('❌ Ошибка: ' + data.message, 'error');
         }
     } catch (error) {
@@ -314,6 +356,7 @@ formData.append('specialRequests', specialRequests);
         showNotification('❌ Ошибка при бронировании', 'error');
     }
 }
+
 async function processPayment(bookingId, amount, roomName) {
     try {
         const token = localStorage.getItem('authToken');
@@ -334,13 +377,8 @@ async function processPayment(bookingId, amount, roomName) {
         const data = await response.json();
         
         if (data.success && data.paymentUrl) {
-            // Открываем оплату в новом окне
             window.open(data.paymentUrl, '_blank');
-            
-            // Показываем сообщение
             showNotification('✅ Бронирование создано! Оплатите в открывшемся окне.', 'success');
-            
-            // Переходим в список бронирований через 2 секунды
             setTimeout(() => {
                 window.location.href = 'booking.html';
             }, 2000);
@@ -352,6 +390,7 @@ async function processPayment(bookingId, amount, roomName) {
         showNotification('❌ Ошибка при создании платежа', 'error');
     }
 }
+
 function showNotification(message, type) {
     const notification = document.createElement('div');
     const colors = { success: '#10b981', error: '#ef4444', info: '#3b82f6' };

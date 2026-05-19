@@ -322,21 +322,18 @@ function getBookingActions(booking, status, isCurrentlyActive = false) {
     switch (status) {
         case 'active':
             if (isCurrentlyActive) {
-                // Активная бронь — только кнопка "Подключиться"
                 return `
                     <a href="room.html?id=${booking.room_id}&bookingId=${booking.id}" class="btn btn-primary">
                         <i class="fa-solid fa-play"></i> Подключиться
                     </a>
                 `;
-
-
             } else {
-                // Активная по статусу, но ещё не началась (по факту предстоящая)
+                // Кнопка отмены ТОЛЬКО для владельца
                 return `
-                    <button class="btn btn-outline" onclick="cancelBooking(${booking.id})">
-                        <i class="fa-solid fa-times"></i> Отменить
-                    </button>
                     ${isOwner ? `
+                        <button class="btn btn-outline" onclick="cancelBooking(${booking.id})">
+                            <i class="fa-solid fa-times"></i> Отменить
+                        </button>
                         <button class="btn btn-primary" onclick="showInviteModalForBooking(${booking.id}, ${booking.room_id})">
                             <i class="fa-solid fa-user-plus"></i> Пригласить
                         </button>
@@ -344,20 +341,19 @@ function getBookingActions(booking, status, isCurrentlyActive = false) {
                 `;
             }
         case 'upcoming':
-            // Предстоящие — показываем кнопку "Пригласить" для создателя
-           return `
-        <button class="btn btn-outline" onclick="cancelBooking(${booking.id})">
-            <i class="fa-solid fa-times"></i> Отменить
-        </button>
-        <button class="btn btn-primary" onclick="showInviteModalForBooking(${booking.id}, ${booking.room_id})">
-            <i class="fa-solid fa-user-plus"></i> Пригласить
-        </button>
-    `;
+            // Кнопки ТОЛЬКО для владельца
+            return `
+                ${isOwner ? `
+                    <button class="btn btn-outline" onclick="cancelBooking(${booking.id})">
+                        <i class="fa-solid fa-times"></i> Отменить
+                    </button>
+                    <button class="btn btn-primary" onclick="showInviteModalForBooking(${booking.id}, ${booking.room_id})">
+                        <i class="fa-solid fa-user-plus"></i> Пригласить
+                    </button>
                 ` : ''}
             `;
         case 'completed':
         case 'cancelled':
-            // Завершённые и отменённые — без кнопок
             return ``;
         default:
             return '';
@@ -398,40 +394,133 @@ function updateStatistics(bookings) {
 }
 
 async function cancelBooking(bookingId) {
+    // Находим карточку бронирования
+    const allCards = document.querySelectorAll('.booking-card');
+    let targetCard = null;
+    for (const card of allCards) {
+        if (card.innerHTML.includes(`cancelBooking(${bookingId})`)) {
+            targetCard = card;
+            break;
+        }
+    }
+    
+    if (!targetCard) {
+        await doCancelBooking(bookingId);
+        return;
+    }
+    
+    // Получаем время начала из текста карточки
+    const dateRangeText = targetCard.querySelector('.info-item:first-child span')?.textContent || '';
+    const timeText = targetCard.querySelector('.info-item:nth-child(2) span')?.textContent || '';
+    
+    let startDateTime = null;
+    try {
+        const dateMatch = dateRangeText.match(/(\d+)\s+(\w+)\s+(\d+)/);
+        if (dateMatch) {
+            const months = { 'января': 0, 'февраля': 1, 'марта': 2, 'апреля': 3, 'мая': 4, 'июня': 5, 'июля': 6, 'августа': 7, 'сентября': 8, 'октября': 9, 'ноября': 10, 'декабря': 11 };
+            const month = months[dateMatch[2].toLowerCase()];
+            if (month !== undefined) {
+                const day = parseInt(dateMatch[1]);
+                const year = parseInt(dateMatch[3]);
+                const timeMatch = timeText.match(/(\d{2}:\d{2})\s*—/);
+                if (timeMatch) {
+                    const [hours, minutes] = timeMatch[1].split(':');
+                    startDateTime = new Date(year, month, day, parseInt(hours), parseInt(minutes));
+                }
+            }
+        }
+    } catch (e) {
+        console.error('Error parsing date:', e);
+    }
+    
+    if (startDateTime) {
+        const now = new Date();
+        const hoursUntilStart = (startDateTime - now) / (1000 * 60 * 60);
+        
+        if (hoursUntilStart < 12 && hoursUntilStart > 0) {
+            const hoursLeft = Math.floor(hoursUntilStart);
+            const minutesLeft = Math.floor((hoursUntilStart - hoursLeft) * 60);
+            showNotification(`❌ Отменить бронирование можно не менее чем за 12 часов до начала.\nДо начала осталось ${hoursLeft} ч ${minutesLeft} мин.`, 'error');
+            return;
+        }
+        
+        if (hoursUntilStart <= 0) {
+            showNotification('❌ Нельзя отменить уже начавшееся или завершённое бронирование.', 'error');
+            return;
+        }
+    }
+    
+    await doCancelBooking(bookingId);
+}
+
+async function doCancelBooking(bookingId) {
     if (!confirm('Вы уверены, что хотите отменить бронирование?')) return;
 
     const token = localStorage.getItem('authToken');
+    
+    // Определяем, владелец ли это (по наличию кнопки "Пригласить" в карточке)
+    const allCards = document.querySelectorAll('.booking-card');
+    let isOwner = false;
+    for (const card of allCards) {
+        if (card.innerHTML.includes(`cancelBooking(${bookingId})`) && card.innerHTML.includes('showInviteModalForBooking')) {
+            isOwner = true;
+            break;
+        }
+    }
 
     try {
         showNotification('Отмена бронирования...', 'info');
         
-        // Исправлено: отправляем объект с полем BookingId (как ожидает бэкенд)
-        const response = await fetch(`${API_BASE_URL}/Payment/refund`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ BookingId: bookingId })  // ← BookingId с большой буквы
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-            if (data.refunded) {
-                showNotification(`✅ ${data.message}`, 'success');
+        let response;
+        let data;
+        
+        if (isOwner) {
+            // Владелец: отменяем всех через Payment/refund
+            response = await fetch(`${API_BASE_URL}/Payment/refund`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ BookingId: bookingId })
+            });
+            data = await response.json();
+            
+            if (data.success) {
+                if (data.refunded) {
+                    showNotification(`✅ ${data.message}`, 'success');
+                } else {
+                    showNotification('✅ Бронирование отменено', 'success');
+                }
             } else {
-                showNotification('✅ Бронирование отменено', 'success');
+                showNotification(data.message || 'Ошибка при отмене', 'error');
             }
-            setTimeout(() => window.location.reload(), 1500);
         } else {
-            showNotification(data.message || 'Ошибка при отмене', 'error');
+            // Приглашённый: отменяем только себя через User/bookings
+            response = await fetch(`${API_BASE_URL}/User/bookings/${bookingId}/cancel`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            data = await response.json();
+            
+            if (data.success) {
+                showNotification('✅ Ваше бронирование отменено', 'success');
+            } else {
+                showNotification(data.message || 'Ошибка при отмене', 'error');
+            }
+        }
+        
+        if (data.success) {
+            setTimeout(() => window.location.reload(), 1500);
         }
     } catch (error) {
         console.error('Cancel error:', error);
         showNotification('Ошибка при отмене бронирования', 'error');
     }
 }
+
 function editBooking(bookingId, roomId) {
     window.location.href = `edit-booking.html?id=${bookingId}&room=${roomId}`;
 }
@@ -829,8 +918,9 @@ async function inviteUserToBooking(invitedUserId) {
         if (data.success) {
             showNotification(data.message, 'success');
             closeModal('inviteModal');
-            await loadUserBookings(); // обновляем список
+            await loadUserBookings();
         } else {
+            // Показываем сообщение об ошибке (включая "Комната заполнена")
             showNotification(data.message || 'Ошибка при приглашении', 'error');
         }
     } catch (e) {

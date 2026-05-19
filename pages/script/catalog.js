@@ -80,7 +80,6 @@ function displayRooms(rooms) {
         <div class="room-card" data-room-id="${room.id}">
             <div class="room-image">
                 <img src="${getImageUrl(room.base_image_url)}" alt="${room.title}">
-                <div class="room-badge">${room.price_per_hour === 0 ? 'Бесплатно' : 'Популярное'}</div>
                 <button class="favorite-btn" onclick="toggleFavorite(${room.id})">
                     <i class="fa-regular fa-heart"></i>
                 </button>
