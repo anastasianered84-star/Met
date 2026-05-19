@@ -314,11 +314,6 @@ function escapeHtml(str) {
 }
 
 function getBookingActions(booking, status, isCurrentlyActive = false) {
-    // Получаем текущего пользователя
-    const currentUserId = parseInt(localStorage.getItem('userId'));
-    // Проверяем, является ли текущий пользователь владельцем бронирования
-    const isOwner = booking.user_id === currentUserId;
-    
     switch (status) {
         case 'active':
             if (isCurrentlyActive) {
@@ -328,29 +323,23 @@ function getBookingActions(booking, status, isCurrentlyActive = false) {
                     </a>
                 `;
             } else {
-                // Кнопка отмены ТОЛЬКО для владельца
                 return `
-                    ${isOwner ? `
-                        <button class="btn btn-outline" onclick="cancelBooking(${booking.id})">
-                            <i class="fa-solid fa-times"></i> Отменить
-                        </button>
-                        <button class="btn btn-primary" onclick="showInviteModalForBooking(${booking.id}, ${booking.room_id})">
-                            <i class="fa-solid fa-user-plus"></i> Пригласить
-                        </button>
-                    ` : ''}
-                `;
-            }
-        case 'upcoming':
-            // Кнопки ТОЛЬКО для владельца
-            return `
-                ${isOwner ? `
                     <button class="btn btn-outline" onclick="cancelBooking(${booking.id})">
                         <i class="fa-solid fa-times"></i> Отменить
                     </button>
                     <button class="btn btn-primary" onclick="showInviteModalForBooking(${booking.id}, ${booking.room_id})">
                         <i class="fa-solid fa-user-plus"></i> Пригласить
                     </button>
-                ` : ''}
+                `;
+            }
+        case 'upcoming':
+            return `
+                <button class="btn btn-outline" onclick="cancelBooking(${booking.id})">
+                    <i class="fa-solid fa-times"></i> Отменить
+                </button>
+                <button class="btn btn-primary" onclick="showInviteModalForBooking(${booking.id}, ${booking.room_id})">
+                    <i class="fa-solid fa-user-plus"></i> Пригласить
+                </button>
             `;
         case 'completed':
         case 'cancelled':

@@ -285,8 +285,8 @@ function logout() {
     
     showNotification('Вы вышли из системы', 'info');
     
-    // Просто перезагружаем страницу, а auth-check.js обновит кнопки
+    // Просто переходим в корень сайта
     setTimeout(() => {
-        window.location.href = '../index.html'; // Явно указываем путь к главной
+        window.location.href = '/';
     }, 1000);
 }
