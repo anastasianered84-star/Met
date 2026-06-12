@@ -222,7 +222,10 @@ async function sendMessage() {
     }
 
     try {
-        await connection.invoke("SendMessage", currentRoomId, message, currentUserId);
+        const urlParams = new URLSearchParams(window.location.search);
+        const bookingId = parseInt(urlParams.get('bookingId') || 0);
+        
+        await connection.invoke("SendMessage", currentRoomId, message, currentUserId, bookingId);
         input.value = '';
     } catch (e) {
         console.error('Send error:', e);
