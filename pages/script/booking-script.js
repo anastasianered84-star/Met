@@ -210,15 +210,13 @@ function createBookingCard(booking, status) {
     const card = document.createElement('div');
     card.className = `booking-card ${status}`;
 
-    // ========== ИСПРАВЛЕНИЕ: парсим как ЛОКАЛЬНОЕ время ==========
     const startTime = parseLocalTimeFromDB(booking.start_time);
     const endTime = parseLocalTimeFromDB(booking.end_time);
-    // ============================================================
+    
+    card.setAttribute('data-booking-id', booking.id);
 
     const duration = Math.round((endTime - startTime) / (1000 * 60 * 60));
-
     const roomName = getRoomName(booking.room_id);
-
     const now = new Date();
     const isCurrentlyActive = status === 'active' && startTime <= now && endTime > now;
 
@@ -252,7 +250,6 @@ function createBookingCard(booking, status) {
             `;
         }
     }
-    
 
     const startDateStr = startTime.toLocaleDateString('ru-RU', {
         day: 'numeric',
@@ -262,12 +259,6 @@ function createBookingCard(booking, status) {
 
     const startTimeStr = startTime.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
     const endTimeStr = endTime.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-
-    // Отладка (после исправления время будет правильным)
-    console.log(`=== Бронирование #${booking.id} ===`);
-    console.log('Raw start_time:', booking.start_time);
-    console.log('Parsed startTime:', startTime.toString());
-    console.log('Display time:', startTimeStr);
 
     card.innerHTML = `
         <div class="booking-header">
@@ -296,13 +287,15 @@ function createBookingCard(booking, status) {
             </div>
             <div class="booking-actions">
                 ${getBookingActions(booking, status, isCurrentlyActive)}
+                <button class="btn btn-outline" onclick="loadParticipants(${booking.id}, this)">
+                    <i class="fa-solid fa-users"></i> Участники
+                </button>
             </div>
         </div>
     `;
 
     return card;
 }
-
 function escapeHtml(str) {
     if (!str) return '';
     return str
@@ -316,22 +309,15 @@ function escapeHtml(str) {
 function getBookingActions(booking, status, isCurrentlyActive = false) {
     switch (status) {
         case 'active':
-            if (isCurrentlyActive) {
-                return `
-                    <a href="room.html?id=${booking.room_id}&bookingId=${booking.id}" class="btn btn-primary">
-                        <i class="fa-solid fa-play"></i> Подключиться
-                    </a>
-                `;
-            } else {
-                return `
-                    <button class="btn btn-outline" onclick="cancelBooking(${booking.id})">
-                        <i class="fa-solid fa-times"></i> Отменить
-                    </button>
-                    <button class="btn btn-primary" onclick="showInviteModalForBooking(${booking.id}, ${booking.room_id})">
-                        <i class="fa-solid fa-user-plus"></i> Пригласить
-                    </button>
-                `;
-            }
+            // Убираем кнопку "Отменить", оставляем только "Подключиться" и "Пригласить"
+            return `
+                <a href="room.html?id=${booking.room_id}&bookingId=${booking.id}" class="btn btn-primary">
+                    <i class="fa-solid fa-play"></i> Подключиться
+                </a>
+                <button class="btn btn-primary" onclick="showInviteModalForBooking(${booking.id}, ${booking.room_id})">
+                    <i class="fa-solid fa-user-plus"></i> Пригласить
+                </button>
+            `;
         case 'upcoming':
             return `
                 <button class="btn btn-outline" onclick="cancelBooking(${booking.id})">
@@ -348,7 +334,6 @@ function getBookingActions(booking, status, isCurrentlyActive = false) {
             return '';
     }
 }
-
 function updateStatistics(bookings) {
     const stats = { active: 0, upcoming: 0, completed: 0, cancelled: 0 };
 
@@ -979,7 +964,61 @@ function copyInviteLink() {
         showNotification('Ссылка скопирована!', 'success');
     }
 }
-
+async function loadParticipants(bookingId, buttonElement) {
+    const token = localStorage.getItem('authToken');
+    const card = buttonElement.closest('.booking-card');
+    
+    // Если уже есть блок с участниками, удаляем его
+    const existingParticipants = card.querySelector('.participants-list');
+    if (existingParticipants) {
+        existingParticipants.remove();
+        return;
+    }
+    
+    try {
+        buttonElement.disabled = true;
+        buttonElement.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Загрузка...';
+        
+        const response = await fetch(`${API_BASE_URL}/User/booking/${bookingId}/participants`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await response.json();
+        
+        buttonElement.disabled = false;
+        buttonElement.innerHTML = '<i class="fa-solid fa-users"></i> Участники';
+        
+        if (data.success && data.participants && data.participants.length > 0) {
+            const participantsHtml = `
+                <div class="participants-list">
+                    <div class="participants-title">
+                        <i class="fa-solid fa-users"></i> Участники (${data.participants.length})
+                    </div>
+                    <div class="participants-badges">
+                        ${data.participants.map(p => `
+                            <span class="participant-badge ${p.is_owner ? 'owner' : ''}">
+                                <i class="fa-solid ${p.is_owner ? 'fa-crown' : 'fa-user'}"></i>
+                                ${escapeHtml(p.first_name || '')} ${escapeHtml(p.last_name || '')}
+                            </span>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+            
+            // Вставляем после booking-actions
+            const bookingActions = card.querySelector('.booking-actions');
+            if (bookingActions) {
+                bookingActions.insertAdjacentHTML('afterend', participantsHtml);
+            }
+        } else {
+            showNotification('Нет участников', 'info');
+        }
+    } catch (error) {
+        console.error('Error loading participants:', error);
+        buttonElement.disabled = false;
+        buttonElement.innerHTML = '<i class="fa-solid fa-users"></i> Участники';
+        showNotification('Ошибка загрузки участников', 'error');
+    }
+}
 // Поиск пользователей для приглашения
 
 // Приглашение пользователя в предстоящую бронь

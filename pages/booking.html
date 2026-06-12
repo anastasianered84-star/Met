@@ -7,6 +7,103 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="../style/styles.css">
     <link rel="stylesheet" href="../style/booking.css">
+    <style>
+        /* Дополнительные стили для участников */
+        .participants-list {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+        .participants-title {
+            font-size: 0.8rem;
+            color: rgba(255,255,255,0.6);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .participants-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .participant-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            background: rgba(99, 102, 241, 0.2);
+            border-radius: 20px;
+            font-size: 0.75rem;
+            color: #c7d2fe;
+        }
+        .participant-badge i {
+            font-size: 0.7rem;
+            color: #818cf8;
+        }
+        .participant-badge.owner {
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+        }
+        .participant-badge.owner i {
+            color: #10b981;
+        }
+        .view-participants-btn {
+            background: none;
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 20px;
+            padding: 4px 10px;
+            font-size: 0.7rem;
+            cursor: pointer;
+            color: #a0aec0;
+            transition: all 0.2s;
+        }
+        .view-participants-btn:hover {
+            background: rgba(255,255,255,0.1);
+            color: white;
+        }
+        .participants-modal-content {
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+        .participant-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .participant-avatar {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        .participant-info {
+            flex: 1;
+        }
+        .participant-name {
+            font-weight: 600;
+        }
+        .participant-email {
+            font-size: 0.75rem;
+            color: rgba(255,255,255,0.5);
+        }
+        .participant-role {
+            font-size: 0.7rem;
+            padding: 2px 8px;
+            border-radius: 12px;
+            background: rgba(99,102,241,0.2);
+        }
+        .participant-role.owner {
+            background: rgba(16,185,129,0.2);
+            color: #10b981;
+        }
+    </style>
 </head>
 <body>
     <!-- Header -->
@@ -93,6 +190,17 @@
         </div>
     </main>
 
+    <!-- Модальное окно для списка участников -->
+    <div class="modal" id="participantsModal" style="display: none;">
+        <div class="modal-content participants-modal-content" style="max-width: 450px;">
+            <button class="close-modal" onclick="closeParticipantsModal()">&times;</button>
+            <h2 class="modal-title" id="participantsModalTitle">Участники бронирования</h2>
+            <div id="participantsListContainer">
+                <div style="text-align: center; padding: 20px;">Загрузка...</div>
+            </div>
+        </div>
+    </div>
+
     <!-- Footer -->
     <footer>
         <div class="footer-container">
@@ -110,13 +218,69 @@
 
     <script src="script/booking-script.js"></script>
     <script src="script/auth-check.js"></script>
+    <script src="script/auth.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async function() {
+            const token = localStorage.getItem('authToken');
+            const userId = localStorage.getItem('userId');
+            await updateAuthUI(token, userId);
+        });
+        
+        // Функции для модального окна участников
+        function closeParticipantsModal() {
+            document.getElementById('participantsModal').style.display = 'none';
+        }
+        
+        async function showParticipants(bookingId, roomName) {
+            const modal = document.getElementById('participantsModal');
+            const title = document.getElementById('participantsModalTitle');
+            title.textContent = `Участники: ${roomName}`;
+            modal.style.display = 'flex';
+            
+            const container = document.getElementById('participantsListContainer');
+            container.innerHTML = '<div style="text-align: center; padding: 20px;"><i class="fa-solid fa-spinner fa-spin"></i> Загрузка...</div>';
+            
+            try {
+                const token = localStorage.getItem('authToken');
+                const response = await fetch(`https://metabook-production.up.railway.app/api/Booking/${bookingId}/participants`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+                
+                if (data.success && data.participants) {
+                    const currentUserId = parseInt(localStorage.getItem('userId'));
+                    container.innerHTML = data.participants.map(p => `
+                        <div class="participant-item">
+                            <div class="participant-avatar">
+                                ${(p.first_name?.[0] || 'U')}${(p.last_name?.[0] || '')}
+                            </div>
+                            <div class="participant-info">
+                                <div class="participant-name">${escapeHtml(p.first_name || '')} ${escapeHtml(p.last_name || '')}</div>
+                                <div class="participant-email">${escapeHtml(p.email || '')}</div>
+                            </div>
+                            <div class="participant-role ${p.user_id === currentUserId ? 'owner' : ''}">
+                                ${p.user_id === currentUserId ? '👑 Владелец' : (p.is_owner ? '👑 Владелец' : '👤 Участник')}
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = '<div style="text-align: center; padding: 20px; color: rgba(255,255,255,0.5);"><i class="fa-solid fa-users"></i><p>Нет участников</p></div>';
+                }
+            } catch (error) {
+                console.error('Error loading participants:', error);
+                container.innerHTML = '<div style="text-align: center; padding: 20px; color: #ef4444;">Ошибка загрузки участников</div>';
+            }
+        }
+        
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
+    </script>
 </body>
-<script src="script/auth.js"></script>
-<script>
-    document.addEventListener('DOMContentLoaded', async function() {
-        const token = localStorage.getItem('authToken');
-        const userId = localStorage.getItem('userId');
-        await updateAuthUI(token, userId);
-    });
-</script>
 </html>

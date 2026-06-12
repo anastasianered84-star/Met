@@ -99,27 +99,7 @@
             <h2 class="modal-title">Пригласить в комнату</h2>
             
             <div class="invite-options">
-                <div class="invite-option" onclick="showInviteMethod('link')">
-                    <div class="invite-icon">
-                        <i class="fa-solid fa-link"></i>
-                    </div>
-                    <div class="invite-content">
-                        <h4>Ссылка для приглашения</h4>
-                        <p>Скопируйте и отправьте ссылку друзьям</p>
-                    </div>
-                    <i class="fa-solid fa-chevron-right"></i>
-                </div>
-                
-                <div class="invite-option" onclick="showInviteMethod('qr')">
-                    <div class="invite-icon">
-                        <i class="fa-solid fa-qrcode"></i>
-                    </div>
-                    <div class="invite-content">
-                        <h4>QR-код</h4>
-                        <p>Отсканируйте код для быстрого доступа</p>
-                    </div>
-                    <i class="fa-solid fa-chevron-right"></i>
-                </div>
+               
                 
                 <div class="invite-option" onclick="showInviteMethod('search')">
                     <div class="invite-icon">
@@ -132,27 +112,8 @@
                     <i class="fa-solid fa-chevron-right"></i>
                 </div>
             </div>
-            <div class="invite-method" id="linkMethod">
-                <h4>Ссылка для приглашения</h4>
-                <div class="copy-link">
-                    <input type="text" value="https://metabook.com/join/cyberpunk-lounge?invite=abc123" readonly id="inviteLink">
-                    <button class="btn btn-primary" onclick="copyInviteLink()">
-                        <i class="fa-solid fa-copy"></i> Копировать
-                    </button>
-                </div>
-                <p class="invite-description">
-                    Отправьте эту ссылку друзьям для присоединения к комнате
-                </p>
-            </div>
-            <div class="invite-method" id="qrMethod">
-                <h4>QR-код для присоединения</h4>
-                <div class="qr-code">
-                    <div class="qr-placeholder">
-                        <i class="fa-solid fa-qrcode"></i>
-                    </div>
-                    <p>Отсканируйте код камерой телефона для быстрого доступа к комнате</p>
-                </div>
-            </div>
+          
+          
             <div class="invite-method" id="searchMethod">
                 <h4>Поиск пользователей</h4>
                 <div class="user-search">

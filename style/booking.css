@@ -261,4 +261,47 @@ nav a.active::after {
     .page-title {
         font-size: 2rem;
     }
+
+    
 }
+.participants-list {
+        margin-top: 16px;
+        padding-top: 12px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .participants-title {
+        font-size: 0.8rem;
+        color: rgba(255, 255, 255, 0.6);
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .participants-badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    
+    .participant-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 5px 12px;
+        background: rgba(99, 102, 241, 0.2);
+        border-radius: 20px;
+        font-size: 0.75rem;
+        color: #c7d2fe;
+    }
+    
+    .participant-badge.owner {
+        background: rgba(16, 185, 129, 0.2);
+        color: #10b981;
+    }
+    
+    .participant-badge i {
+        font-size: 0.7rem;
+    }
+

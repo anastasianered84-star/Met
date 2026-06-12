@@ -74,7 +74,6 @@ async function initSignalR() {
     if (connection) return;
     
     try {
-        // Проверяем, что signalR загружен
         if (typeof signalR === 'undefined') {
             console.error('SignalR библиотека не загружена');
             showNotification('Ошибка загрузки чата, обновите страницу', 'error');
@@ -90,38 +89,57 @@ async function initSignalR() {
             const container = document.querySelector('.chat-messages');
             if (!container) return;
             
+            // Удаляем заглушку, если она есть
+            if (container.querySelector('.chat-placeholder')) {
+                container.innerHTML = '';
+            }
+            
             const msg = {
                 ...message,
                 is_own: message.user_id === currentUserId
             };
             
-            // Удаляем системное сообщение "Вы вошли в комнату", если оно есть
-            if (container.querySelector('.message.system')) {
-                container.innerHTML = '';
+            appendChatMessage(msg, container);
+            container.scrollTop = container.scrollHeight;
+        });
+
+        // Новый обработчик для загрузки истории
+        connection.on("LoadChatHistory", (history) => {
+            const container = document.querySelector('.chat-messages');
+            if (!container) return;
+            
+            container.innerHTML = '';
+            
+            if (history && history.length > 0) {
+                history.forEach(msg => {
+                    const message = {
+                        ...msg,
+                        is_own: msg.user_id === currentUserId
+                    };
+                    appendChatMessage(message, container);
+                });
+            } else {
+                container.innerHTML = `
+                    <div class="message system">
+                        <div class="message-content">
+                            <p>История чата пуста. Напишите первое сообщение!</p>
+                        </div>
+                    </div>
+                `;
             }
             
-            appendChatMessage(msg, container);
             container.scrollTop = container.scrollHeight;
         });
 
         await connection.start();
         console.log('SignalR connected');
         
-        await connection.invoke("JoinRoom", currentRoomId, currentUserId);
-        console.log('Joined room:', currentRoomId);
+        // Получаем bookingId из URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const bookingId = parseInt(urlParams.get('bookingId') || 0);
         
-        // Добавляем системное сообщение о входе
-        const container = document.querySelector('.chat-messages');
-        if (container) {
-            container.innerHTML = `
-                <div class="message system">
-                    <div class="message-content">
-                        <p>Вы вошли в комнату</p>
-                    </div>
-                    <span class="message-time">${formatTime(new Date())}</span>
-                </div>
-            `;
-        }
+        await connection.invoke("JoinRoom", currentRoomId, currentUserId, bookingId);
+        console.log('Joined room:', currentRoomId);
         
     } catch (err) {
         console.error('SignalR connection error:', err);
